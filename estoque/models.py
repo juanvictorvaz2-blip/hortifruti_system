@@ -1,0 +1,212 @@
+from decimal import Decimal
+import uuid
+from django.contrib.auth.models import User
+from django.db import models
+from django.utils import timezone
+
+
+# Cadastro das Frutas/Produtos
+class Fruta(models.Model):
+    TIPO_ARMAZEM_CHOICES = [
+        ('DEPOSITO', 'Depósito'),
+        ('CAMARA_FRIA', 'Câmara Fria'),
+    ]
+
+    nome = models.CharField(max_length=100)
+    dias_validade_padrao = models.PositiveIntegerField(
+        help_text='Validade média em dias após a colheita/recebimento'
+    )
+    armazem_recomendado = models.CharField(
+        max_length=20, choices=TIPO_ARMAZEM_CHOICES, default='DEPOSITO'
+    )
+
+    def __str__(self):
+        return self.nome
+
+
+# Cadastro das Lojas de Destino
+class Loja(models.Model):
+    nome = models.CharField(max_length=100)
+    endereco = models.CharField(max_length=200, blank=True)
+
+    def __str__(self):
+        return self.nome
+
+
+# Controle de Lotes e Entradas no Estoque
+class LoteEntrada(models.Model):
+    fruta = models.ForeignKey(Fruta, on_delete=models.PROTECT)
+    codigo_lote = models.CharField(
+        max_length=50, unique=True, blank=True, null=True
+    )
+    quantidade_inicial = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text='Quantidade em Kg ou Caixas',
+    )
+    quantidade_atual = models.DecimalField(max_digits=10, decimal_places=2)
+    data_entrada = models.DateField(auto_now_add=True)
+    data_validade = models.DateField()
+    local_armazenado = models.CharField(
+        max_length=20, choices=Fruta.TIPO_ARMAZEM_CHOICES
+    )
+
+    def save(self, *args, **kwargs):
+        if not self.codigo_lote:
+            self.codigo_lote = f"LOTE-{timezone.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
+
+        if self.quantidade_atual is None:
+            self.quantidade_atual = self.quantidade_inicial
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f'Lote {self.codigo_lote} - {self.fruta.nome}'
+
+
+# Registro de Saídas para as Lojas (Rastreabilidade)
+class SaidaEstoque(models.Model):
+    lote = models.ForeignKey(
+        LoteEntrada, on_delete=models.PROTECT, related_name='saidas'
+    )
+    loja_destino = models.ForeignKey(Loja, on_delete=models.PROTECT)
+    quantidade = models.DecimalField(max_digits=10, decimal_places=2)
+    data_saida = models.DateTimeField(auto_now_add=True)
+    responsavel = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+
+    def __str__(self):
+        return f'{self.quantidade} de {self.lote.fruta.nome} -> {self.loja_destino.nome}'
+
+
+# Movimentação Interna / Perdas / Vendas diretas
+class MovimentacaoEstoque(models.Model):
+    TIPO_MOVIMENTACAO_CHOICES = [
+        ('VENDA', 'Venda'),
+        ('PERDA', 'Perda / Descarte'),
+        ('TRANSFERENCIA', 'Transferência Interna'),
+    ]
+
+    lote = models.ForeignKey(
+        LoteEntrada, on_delete=models.CASCADE, related_name='movimentacoes'
+    )
+    tipo = models.CharField(
+        max_length=20, choices=TIPO_MOVIMENTACAO_CHOICES, default='VENDA'
+    )
+    quantidade = models.DecimalField(max_digits=10, decimal_places=2)
+    observacao = models.TextField(blank=True, null=True)
+    data_movimentacao = models.DateTimeField(auto_now_add=True)
+    usuario = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True
+    )
+
+    def __str__(self):
+        return f'{self.tipo} - {self.quantidade} ({self.lote.codigo_lote})'
+
+
+# Vendas e Pedidos (Telefone/iFood)
+class Pedido(models.Model):
+    CANAL_CHOICES = [
+        ('TELEFONE', '📞 Direto / Telefone / WhatsApp'),
+        ('IFOOD', '🛵 iFood'),
+    ]
+
+    STATUS_CHOICES = [
+        ('RASCUNHO', 'Rascunho'),
+        ('CONFIRMADO', 'Confirmado / Em Separação'),
+        ('CONCLUIDO', 'Concluído'),
+        ('CANCELADO', 'Cancelado'),
+    ]
+
+    codigo_pedido = models.CharField(
+    max_length=30, unique=True, editable=False
+)
+    canal_venda = models.CharField(
+        max_length=20,
+        choices=CANAL_CHOICES,
+        default='TELEFONE',
+        verbose_name='Canal de Venda',
+    )
+    cliente_nome = models.CharField(
+        max_length=150, verbose_name='Nome do Cliente'
+    )
+    cliente_telefone = models.CharField(
+        max_length=20, blank=True, null=True, verbose_name='Telefone'
+    )
+    codigo_ifood = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name='Nº Pedido iFood (Opções)',
+    )
+
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default='RASCUNHO'
+    )
+    valor_total = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal('0.00')
+    )
+    data_criacao = models.DateTimeField(auto_now_add=True)
+    usuario = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True
+    )
+
+    def save(self, *args, **kwargs):
+        if not self.codigo_pedido:
+            prefixo = 'IFOOD' if self.canal_venda == 'IFOOD' else 'DIR'
+            self.codigo_pedido = (
+                f"{prefixo}-{timezone.now().strftime('%Y%m%d')}-{self.pk or 'N'}"
+            )
+        super().save(*args, **kwargs)
+        if 'N' in self.codigo_pedido:
+            prefixo = 'IFOOD' if self.canal_venda == 'IFOOD' else 'DIR'
+            self.codigo_pedido = (
+                f"{prefixo}-{timezone.now().strftime('%Y%m%d')}-{self.id}"
+            )
+            super().save(update_fields=['codigo_pedido'])
+
+    def atualizar_valor_total(self):
+        total = sum(
+            item.subtotal for item in self.itens.all() if item.subtotal
+        )
+        self.valor_total = total
+        self.save(update_fields=['valor_total'])
+
+    def __str__(self):
+        return f'[{self.get_canal_venda_display()}] {self.codigo_pedido} - {self.cliente_nome}'
+
+
+# Itens associados a um Pedido
+class ItemPedido(models.Model):
+    pedido = models.ForeignKey(
+        Pedido, on_delete=models.CASCADE, related_name='itens'
+    )
+    fruta = models.ForeignKey(Fruta, on_delete=models.PROTECT)
+    quantidade = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text='Quantidade em Kg ou Unidades',
+    )
+    preco_unitario = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        verbose_name='Preço Unitário (R$)',
+    )
+    subtotal = models.DecimalField(
+        max_digits=10, decimal_places=2, editable=False, default=Decimal('0.00')
+    )
+
+    def save(self, *args, **kwargs):
+        self.subtotal = Decimal(str(self.quantidade)) * Decimal(
+            str(self.preco_unitario)
+        )
+        super().save(*args, **kwargs)
+        self.pedido.atualizar_valor_total()
+
+    def delete(self, *args, **kwargs):
+        pedido = self.pedido
+        super().delete(*args, **kwargs)
+        pedido.atualizar_valor_total()
+
+    def __str__(self):
+        return f'{self.quantidade}x {self.fruta.nome} no Pedido #{self.pedido.codigo_pedido}'

@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm mb-2">← Voltar ao Dashboard</a>
+            <h2 class="mb-0">Estoque de Lotes em Tempo Real</h2>
+        </div>
+        <a href="{% url 'lote_criar' %}" class="btn btn-primary font-weight-bold">+ Novo Lote</a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Tabela Depósito -->
+    <div class="card mb-4 border-warning">
+        <div class="card-header bg-warning text-dark font-weight-bold">📦 Depósito (Temperatura Ambiente)</div>
+        <div class="card-body p-0">
+            <table class="table table-striped table-hover m-0">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Fruta</th>
+                        <th>Qtd. Inicial</th>
+                        <th>Qtd. Atual</th>
+                        <th>Validade</th>
+                        <th class="text-center">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lote in lotes_deposito %}
+                    <tr>
+                        <td><strong>{{ lote.codigo_lote }}</strong></td>
+                        <td>{{ lote.fruta.nome }}</td>
+                        <td>{{ lote.quantidade_inicial }}</td>
+                        <td><span class="badge badge-info">{{ lote.quantidade_atual }}</span></td>
+                        <td>{{ lote.data_validade|date:"d/m/Y" }}</td>
+                        <td class="text-center">
+                            <a href="{% url 'lote_dar_baixa' lote.pk %}" class="btn btn-sm btn-warning font-weight-bold" title="Dar Baixa">📉 Baixa</a>
+                            <a href="{% url 'lote_editar' lote.pk %}" class="btn btn-sm btn-outline-primary" title="Editar">✏️ Editar</a>
+                            <a href="{% url 'lote_excluir' lote.pk %}" class="btn btn-sm btn-outline-danger" title="Excluir">🗑️ Excluir</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center text-muted py-3">Nenhum lote no depósito.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tabela Câmara Fria -->
+    <div class="card mb-4 border-info">
+        <div class="card-header bg-info text-white font-weight-bold">❄️ Câmara Fria</div>
+        <div class="card-body p-0">
+            <table class="table table-striped table-hover m-0">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Fruta</th>
+                        <th>Qtd. Inicial</th>
+                        <th>Qtd. Atual</th>
+                        <th>Validade</th>
+                        <th class="text-center">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lote in lotes_camara_fria %}
+                    <tr>
+                        <td><strong>{{ lote.codigo_lote }}</strong></td>
+                        <td>{{ lote.fruta.nome }}</td>
+                        <td>{{ lote.quantidade_inicial }}</td>
+                        <td><span class="badge badge-info">{{ lote.quantidade_atual }}</span></td>
+                        <td>{{ lote.data_validade|date:"d/m/Y" }}</td>
+                        <td class="text-center">
+                            <a href="{% url 'lote_dar_baixa' lote.pk %}" class="btn btn-sm btn-warning font-weight-bold" title="Dar Baixa">📉 Baixa</a>
+                            <a href="{% url 'lote_editar' lote.pk %}" class="btn btn-sm btn-outline-primary" title="Editar">✏️ Editar</a>
+                            <a href="{% url 'lote_excluir' lote.pk %}" class="btn btn-sm btn-outline-danger" title="Excluir">🗑️ Excluir</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center text-muted py-3">Nenhum lote na câmara fria.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

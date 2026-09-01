@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histórico de Saídas - Hortifrúti</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+<body class="bg-light">
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand fw-bold" href="{% url 'dashboard' %}"><i class="bi bi-box-seam me-2"></i>Hortifrúti Estoque</a>
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left me-1"></i>Voltar ao Dashboard</a>
+        </div>
+    </nav>
+
+    <div class="container py-2">
+        <h4 class="fw-bold mb-4"><i class="bi bi-clock-history me-2"></i>Histórico e Relatório de Saídas</h4>
+
+        <!-- Card de Filtros -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Fruta</label>
+                        <select name="fruta" class="form-select">
+                            <option value="">Todas</option>
+                            {% for f in frutas %}
+                                <option value="{{ f.id }}" {% if filtros.fruta == f.id|stringformat:"i" %}selected{% endif %}>{{ f.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Loja de Destino</label>
+                        <select name="loja" class="form-select">
+                            <option value="">Todas</option>
+                            {% for l in lojas %}
+                                <option value="{{ l.id }}" {% if filtros.loja == l.id|stringformat:"i" %}selected{% endif %}>{{ l.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold">Data Inicial</label>
+                        <input type="date" name="data_inicio" value="{{ filtros.data_inicio|default:'' }}" class="form-control">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold">Data Final</label>
+                        <input type="date" name="data_fim" value="{{ filtros.data_fim|default:'' }}" class="form-control">
+                    </div>
+
+                    <div class="col-md-2 d-flex align-items-end gap-2">
+                        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-filter me-1"></i>Filtrar</button>
+                        <a href="{% url 'historico_saidas' %}" class="btn btn-outline-secondary" title="Limpar Filtros"><i class="bi bi-x-circle"></i></a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tabela de Resultados -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Data/Hora</th>
+                                <th>Fruta</th>
+                                <th>Lote ID</th>
+                                <th>Loja Destino</th>
+                                <th class="text-end">Quantidade</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for saida in saidas %}
+                            <tr>
+                                <td>{{ saida.data_saida|date:"d/m/Y H:i" }}</td>
+                                <td class="fw-bold">{{ saida.lote.fruta }}</td>
+                                <td><span class="badge bg-secondary">#{{ saida.lote.id }}</span></td>
+                                <td>{{ saida.loja_destino }}</td>
+                                <td class="text-end fw-bold text-primary">{{ saida.quantidade }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">Nenhuma saída encontrada para os filtros selecionados.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

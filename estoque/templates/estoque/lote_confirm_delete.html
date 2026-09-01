@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container my-4" style="max-width: 500px;">
+    <div class="card border-danger shadow">
+        <div class="card-header bg-danger text-white">
+            <h4 class="mb-0">⚠️ Confirmar Exclusão</h4>
+        </div>
+        <div class="card-body text-center">
+            <p class="lead">Tem certeza que deseja remover o lote <strong>{{ lote.codigo_lote }}</strong> ({{ lote.fruta.nome }})?</p>
+            <p class="text-muted">Esta ação não poderá ser desfeita.</p>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="d-flex justify-content-center gap-3 mt-4">
+                    <a href="{% url 'lotes_listar' %}" class="btn btn-secondary mr-2">Cancelar</a>
+                    <button type="submit" class="btn btn-danger">Sim, Excluir</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container my-4" style="max-width: 550px;">
+    <div class="card shadow">
+        <div class="card-header bg-warning text-dark">
+            <h4 class="mb-0">📉 Dar Baixa no Estoque</h4>
+        </div>
+        <div class="card-body">
+
+            <div class="alert alert-light border mb-3">
+                <strong>Lote:</strong> {{ lote.codigo_lote }}<br>
+                <strong>Produto:</strong> {{ lote.fruta.nome }}<br>
+                <strong>Estoque Atual:</strong> <span class="badge badge-success">{{ lote.quantidade_atual }}</span>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="form-group mb-3">
+                    <label>Tipo de Saída</label>
+                    {{ form.tipo }}
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Quantidade a Retirar</label>
+                    {{ form.quantidade }}
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Observação / Motivo</label>
+                    {{ form.observacao }}
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'lotes_listar' %}" class="btn btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-warning font-weight-bold">Confirmar Baixa</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
