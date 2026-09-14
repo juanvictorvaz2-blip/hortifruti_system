@@ -70,7 +70,9 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Conecta ao PostgreSQL do Render se DATABASE_URL existir, senão usa SQLite local
 DATABASES = {
     'default': dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}", conn_max_age=600
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        conn_max_age=600,
+        ssl_require=os.environ.get('DATABASE_URL') is not None  # Exige SSL apenas em nuvem
     )
 }
 
