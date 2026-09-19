@@ -1,7 +1,9 @@
-from decimal import Decimal
 import uuid
+from decimal import Decimal
+
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models import F, Sum
 from django.utils import timezone
 
 
@@ -44,11 +46,13 @@ class LoteEntrada(models.Model):
         decimal_places=2,
         help_text='Quantidade em Kg ou Caixas',
     )
-    quantidade_atual = models.DecimalField(max_digits=10, decimal_places=2)
+    quantidade_atual = models.DecimalField(
+        max_digits=10, decimal_places=2, blank=True
+    )
     data_entrada = models.DateField(auto_now_add=True)
     data_validade = models.DateField()
     local_armazenado = models.CharField(
-        max_length=20, choices=Fruta.TIPO_ARMAZEM_CHOICES
+        max_length=20, choices=Fruta.TIPO_ARMAZEM_CHOICES, default='DEPOSITO'
     )
 
     def save(self, *args, **kwargs):
@@ -72,7 +76,9 @@ class SaidaEstoque(models.Model):
     loja_destino = models.ForeignKey(Loja, on_delete=models.PROTECT)
     quantidade = models.DecimalField(max_digits=10, decimal_places=2)
     data_saida = models.DateTimeField(auto_now_add=True)
-    responsavel = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    responsavel = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True
+    )
 
     def __str__(self):
         return f'{self.quantidade} de {self.lote.fruta.nome} -> {self.loja_destino.nome}'
@@ -103,10 +109,11 @@ class MovimentacaoEstoque(models.Model):
         return f'{self.tipo} - {self.quantidade} ({self.lote.codigo_lote})'
 
 
-# Vendas e Pedidos (Telefone/iFood)
+# Vendas e Pedidos (Lojas / Telefone / iFood)
 class Pedido(models.Model):
     CANAL_CHOICES = [
         ('TELEFONE', '📞 Direto / Telefone / WhatsApp'),
+        ('LOJA', '🏬 Solicitação de Loja'),
         ('IFOOD', '🛵 iFood'),
     ]
 
@@ -118,16 +125,16 @@ class Pedido(models.Model):
     ]
 
     codigo_pedido = models.CharField(
-    max_length=30, unique=True, editable=False
-)
+        max_length=50, unique=True, editable=False, blank=True
+    )
     canal_venda = models.CharField(
         max_length=20,
         choices=CANAL_CHOICES,
-        default='TELEFONE',
+        default='LOJA',
         verbose_name='Canal de Venda',
     )
     cliente_nome = models.CharField(
-        max_length=150, verbose_name='Nome do Cliente'
+        max_length=150, verbose_name='Nome do Solicitante / Cliente'
     )
     cliente_telefone = models.CharField(
         max_length=20, blank=True, null=True, verbose_name='Telefone'
@@ -140,7 +147,7 @@ class Pedido(models.Model):
     )
 
     status = models.CharField(
-        max_length=20, choices=STATUS_CHOICES, default='RASCUNHO'
+        max_length=20, choices=STATUS_CHOICES, default='CONFIRMADO'
     )
     valor_total = models.DecimalField(
         max_digits=10, decimal_places=2, default=Decimal('0.00')
@@ -152,27 +159,21 @@ class Pedido(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.codigo_pedido:
-            prefixo = 'IFOOD' if self.canal_venda == 'IFOOD' else 'DIR'
-            self.codigo_pedido = (
-                f"{prefixo}-{timezone.now().strftime('%Y%m%d')}-{self.pk or 'N'}"
-            )
+            prefixo = 'IFOOD' if self.canal_venda == 'IFOOD' else 'PED'
+            sufixo_unico = uuid.uuid4().hex[:6].upper()
+            self.codigo_pedido = f"{prefixo}-{timezone.now().strftime('%Y%m%d')}-{sufixo_unico}"
         super().save(*args, **kwargs)
-        if 'N' in self.codigo_pedido:
-            prefixo = 'IFOOD' if self.canal_venda == 'IFOOD' else 'DIR'
-            self.codigo_pedido = (
-                f"{prefixo}-{timezone.now().strftime('%Y%m%d')}-{self.id}"
-            )
-            super().save(update_fields=['codigo_pedido'])
 
     def atualizar_valor_total(self):
-        total = sum(
-            item.subtotal for item in self.itens.all() if item.subtotal
-        )
+        total = self.itens.aggregate(
+            total=Sum(F('quantidade') * F('preco_unitario'))
+        )['total'] or Decimal('0.00')
+
         self.valor_total = total
         self.save(update_fields=['valor_total'])
 
     def __str__(self):
-        return f'[{self.get_canal_venda_display()}] {self.codigo_pedido} - {self.cliente_nome}'
+        return f'{self.codigo_pedido} - {self.cliente_nome}'
 
 
 # Itens associados a um Pedido
@@ -197,9 +198,7 @@ class ItemPedido(models.Model):
     )
 
     def save(self, *args, **kwargs):
-        self.subtotal = Decimal(str(self.quantidade)) * Decimal(
-            str(self.preco_unitario)
-        )
+        self.subtotal = Decimal(str(self.quantidade)) * Decimal(str(self.preco_unitario))
         super().save(*args, **kwargs)
         self.pedido.atualizar_valor_total()
 
@@ -210,3 +209,13 @@ class ItemPedido(models.Model):
 
     def __str__(self):
         return f'{self.quantidade}x {self.fruta.nome} no Pedido #{self.pedido.codigo_pedido}'
+
+
+# Compatibilidade legado
+class Produto(models.Model):
+    nome = models.CharField(max_length=100)
+    quantidade = models.IntegerField(default=0)
+    preco = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+
+    def __str__(self):
+        return self.nome

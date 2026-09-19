@@ -1,18 +1,29 @@
-from django.contrib import admin
-from django.urls import path, include
-from estoque import views  # Importa o módulo de views completo
+from django.urls import path
+from estoque import views
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('accounts/', include('allauth.urls')),  # Rotas do django-allauth
-
-    # Rotas do app Estoque
+    # Dashboard Principal
     path('', views.dashboard, name='dashboard'),
+    path('deposito/dashboard/', views.dashboard, name='dashboard_deposito'),
+
+    # Lotes
     path('lote/novo/', views.lote_criar, name='lote_criar'),
-    path('saida/nova/', views.dinamica_saida, name='saida_criar'),
-    path('historico/', views.historico_saidas, name='historico_saidas'),
     path('lotes/', views.lotes_listar, name='lotes_listar'),
-    path('<int:pk>/editar/', views.lote_editar, name='lote_editar'),
-    path('<int:pk>/excluir/', views.lote_excluir, name='lote_excluir'),
-    path('<int:pk>/baixa/', views.lote_dar_baixa, name='lote_dar_baixa'),
+    path('lote/<int:pk>/editar/', views.lote_editar, name='lote_editar'),
+    path('lote/<int:pk>/excluir/', views.lote_excluir, name='lote_excluir'),
+    path('lote/<int:pk>/baixa/', views.lote_dar_baixa, name='lote_dar_baixa'),
+
+    # Saídas e Histórico
+    path('saida/nova/', views.dinamica_saida, name='dinamica_saida'),
+    path('historico/', views.historico_saidas, name='historico_saidas'),
+
+    # Loja e Pedidos
+    path('loja/', views.catalogo_loja, name='catalogo_loja'),
+    path('loja/adicionar/<int:produto_id>/', views.adicionar_ao_carrinho, name='adicionar_ao_carrinho'),
+    path('loja/remover/<int:produto_id>/', views.remover_do_carrinho, name='remover_do_carrinho'),
+    path('loja/finalizar/', views.finalizar_pedido, name='finalizar_pedido'),
+
+    # Detalhes e Separação de Pedidos
+    path('pedido/<int:pedido_id>/', views.pedido_detalhe, name='pedido_detalhe'),
+    path('deposito/separar/<int:pedido_id>/', views.separar_pedido, name='separar_pedido'),
 ]

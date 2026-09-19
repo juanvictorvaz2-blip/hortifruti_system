@@ -7,36 +7,148 @@
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        .pulse {
+            animation: pulse-animation 1.5s infinite;
+        }
+        @keyframes pulse-animation {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
 </head>
 <body class="bg-light">
 <div class="container my-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Dashboard Principal</h2>
-        <a href="{% url 'lotes_listar' %}" class="btn btn-info font-weight-bold">
-            📦 Gerenciar Lotes
-        </a>
+        <div>
+            <a href="{% url 'catalogo_loja' %}" class="btn btn-warning me-1 fw-bold">
+                <i class="bi bi-cart-plus me-1"></i> Fazer Pedido / Comprar
+            </a>
+            <a href="{% url 'lote_criar' %}" class="btn btn-success me-1">
+                <i class="bi bi-plus-lg me-1"></i> Nova Entrada
+            </a>
+            <a href="{% url 'dinamica_saida' %}" class="btn btn-primary me-1">
+                <i class="bi bi-truck me-1"></i> Registrar Saída
+            </a>
+            <a href="{% url 'lotes_listar' %}" class="btn btn-info fw-bold text-white">
+                📦 Gerenciar Lotes
+            </a>
+        </div>
     </div>
 
     <!-- Barra de Navegação -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-success mb-4 shadow-sm">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-success mb-4 shadow-sm rounded">
         <div class="container-fluid px-4">
             <a class="navbar-brand fw-bold" href="#"><i class="bi bi-box-seam me-2"></i>Hortifrúti Estoque</a>
             <div class="d-flex align-items-center text-white">
+                {% if total_pendentes > 0 %}
+                    <span class="badge bg-danger fs-6 me-3 pulse">
+                        <i class="bi bi-bell-fill me-1"></i> {{ total_pendentes }} Pedido(s) para Separar
+                    </span>
+                {% endif %}
                 <span class="me-3"><i class="bi bi-person-circle me-1"></i> {{ user.username }}</span>
                 <a href="/admin/" class="btn btn-outline-light btn-sm me-2">Painel Admin</a>
             </div>
         </div>
     </nav>
-    {% if messages %}
-    {% for message in messages %}
-        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-sm" role="alert">
-            <i class="bi bi-info-circle me-2"></i>{{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    {% endfor %}
-{% endif %}
 
-    <div class="container-fluid px-4">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-sm" role="alert">
+                <i class="bi bi-info-circle me-2"></i>{{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Banner de Alerta para Pedidos Pendentes de Separação -->
+    {% if total_pendentes > 0 %}
+        <div class="alert alert-warning alert-dismissible fade show shadow-sm mb-4" role="alert">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <h5 class="alert-heading mb-1">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        Existem <strong>{{ total_pendentes }}</strong> pedido(s) aguardando separação!
+                    </h5>
+                    <p class="mb-0 small">Novos pedidos foram solicitados pelas lojas e precisam de separação no depósito.</p>
+                </div>
+                <a href="#secao-pedidos" class="btn btn-warning fw-bold text-dark">
+                    <i class="bi bi-box-seam me-1"></i> Ir para Separação
+                </a>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="container-fluid px-0">
+
+        <!-- SEÇÃO: Pedidos Solicitados pelas Lojas (Separação) -->
+        <div id="secao-pedidos" class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-warning text-dark fw-bold py-3 d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-clock-history me-2"></i>Pedidos de Lojas Aguardando Separação</span>
+                <span class="badge bg-dark">{{ total_pendentes }} pendentes</span>
+            </div>
+            <div class="card-body p-0">
+                {% if pedidos_pendentes %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Código / Cliente</th>
+                                    <th>Data / Hora</th>
+                                    <th>Itens Solicitados</th>
+                                    <th class="text-end pe-3">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for pedido in pedidos_pendentes %}
+                                    <tr>
+                                        <td class="ps-3">
+                                            <strong class="text-primary fs-6">#{{ pedido.codigo_pedido }}</strong>
+                                            <div class="small text-muted">{{ pedido.cliente_nome }}</div>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                <i class="bi bi-calendar3 me-1"></i>{{ pedido.data_criacao|date:"d/m/Y H:i" }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex flex-wrap gap-1">
+                                                {% for item in pedido.itens.all %}
+                                                    <span class="badge bg-light text-dark border">
+                                                        {{ item.fruta.nome }}: <strong>{{ item.quantidade }} kg/cx</strong>
+                                                    </span>
+                                                {% endfor %}
+                                            </div>
+                                        </td>
+                                        <td class="text-end pe-3">
+                                            <div class="d-inline-flex gap-2">
+                                                <a href="{% url 'pedido_detalhe' pedido.id %}" class="btn btn-sm btn-outline-primary fw-bold">
+                                                    <i class="bi bi-eye me-1"></i> Detalhes
+                                                </a>
+                                                <form action="{% url 'separar_pedido' pedido.id %}" method="POST" class="d-inline">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-success fw-bold">
+                                                        <i class="bi bi-check-circle-fill me-1"></i> Separado
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="p-4 text-center text-muted">
+                        <i class="bi bi-check-circle fs-2 text-success"></i>
+                        <p class="mt-2 mb-0">Nenhum pedido pendente de separação no momento.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
         <!-- Indicadores Rápidos (Cards) -->
         <div class="row g-3 mb-4">
             <div class="col-md-3">
@@ -73,10 +185,11 @@
             </div>
         </div>
 
-        <div class="row g-4">
+        <!-- Tabelas de Alertas e Histórico de Saídas -->
+        <div class="row g-4 mb-4">
             <!-- Tabela: Alerta de Validade -->
             <div class="col-lg-6">
-                <div class="card border-0 shadow-sm">
+                <div class="card border-0 shadow-sm h-100">
                     <div class="card-header bg-white fw-bold py-3 text-warning-emphasis">
                         <i class="bi bi-exclamation-triangle-fill me-2 text-warning"></i>Próximos do Vencimento (Próximos 5 dias)
                     </div>
@@ -119,9 +232,12 @@
 
             <!-- Tabela: Últimas Saídas para Lojas -->
             <div class="col-lg-6">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-white fw-bold py-3">
-                        <i class="bi bi-truck me-2 text-primary"></i>Últimas Saídas para Lojas
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-truck me-2 text-primary"></i>Últimas Saídas para Lojas</span>
+                        <a href="{% url 'historico_saidas' %}" class="btn btn-sm btn-outline-dark">
+                            <i class="bi bi-clock-history me-1"></i> Ver Histórico
+                        </a>
                     </div>
                     <div class="card-body p-0">
                         <table class="table table-hover mb-0 align-middle">
@@ -149,27 +265,13 @@
                             </tbody>
                         </table>
                     </div>
-                   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="fw-bold mb-0">Visão Geral do Estoque</h4>
-    <div>
-        <a href="{% url 'lote_criar' %}" class="btn btn-success me-2">
-            <i class="bi bi-plus-lg me-1"></i> Nova Entrada
-        </a>
-        <a href="{% url 'saida_criar' %}" class="btn btn-primary">
-            <i class="bi bi-truck me-1"></i> Registrar Saída
-        </a>
-    </div>
-</div>
-
-<a href="{% url 'historico_saidas' %}" class="btn btn-outline-dark me-2">
-    <i class="bi bi-clock-history me-1"></i> Histórico Completo
-</a>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/bootstrap.bundle.min.js"></script>
+    </div>
+</div>
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/bootstrap.bundle.min.js"></script>
 </body>
 </html>

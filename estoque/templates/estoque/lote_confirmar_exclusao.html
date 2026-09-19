@@ -1,0 +1,14 @@
+{% extends 'base.html' %} <!-- Altere para o seu template base, se houver -->
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Confirmar Exclusão</h2>
+    <p>Tem certeza de que deseja excluir o lote <strong>{{ lote.codigo_lote }}</strong> ({{ lote.produto }})?</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Confirmar Exclusão</button>
+        <a href="{% url 'lotes_listar' %}" class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>
+{% endblock %}
