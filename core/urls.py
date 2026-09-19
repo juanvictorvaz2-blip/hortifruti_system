@@ -2,6 +2,9 @@ from django.urls import path
 from estoque import views
 
 urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('accounts/', include('django.contrib.auth.urls')),  # <--- Habilita /accounts/login/ e /accounts/logout/
+    path('', include('estoque.urls')),
     # Dashboard Principal
     path('', views.dashboard, name='dashboard'),
     path('deposito/dashboard/', views.dashboard, name='dashboard_deposito'),
