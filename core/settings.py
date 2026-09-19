@@ -142,3 +142,10 @@ STATICFILES_STORAGE = (
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Garante que URLs sem barra no final redirecionem para a rota com barra
+APPEND_SLASH = True
+
+# Força o redirecionamento de HTTP (comum em celulares) para HTTPS
+SECURE_SSL_REDIRECT = not DEBUG
+ALLOWED_HOSTS = ['hortifruti-system.onrender.com', 'localhost', '127.0.0.1', '*']
