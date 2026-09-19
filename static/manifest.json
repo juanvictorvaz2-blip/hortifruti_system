@@ -1,0 +1,20 @@
+{
+  "name": "Hortifrúti Estoque",
+  "short_name": "Hortifrúti",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#198754",
+  "theme_color": "#198754",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1625/1625048.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1625/1625048.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
