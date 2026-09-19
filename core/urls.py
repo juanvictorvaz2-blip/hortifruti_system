@@ -1,10 +1,12 @@
-from django.urls import path
+from django.contrib import admin
+from django.urls import path, include
 from estoque import views
 
 urlpatterns = [
+    # Rotas do Sistema / Admin
     path('admin/', admin.site.urls),
-    path('accounts/', include('django.contrib.auth.urls')),  # <--- Habilita /accounts/login/ e /accounts/logout/
-    path('', include('estoque.urls')),
+    path('accounts/', include('django.contrib.auth.urls')),  # Habilita /accounts/login/
+
     # Dashboard Principal
     path('', views.dashboard, name='dashboard'),
     path('deposito/dashboard/', views.dashboard, name='dashboard_deposito'),
