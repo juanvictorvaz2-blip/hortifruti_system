@@ -3,35 +3,345 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema Hortifruti</title>
+    <title>{% block title %}Sistema Hortifruti{% endblock %}</title>
+
+    <!-- Bootstrap 4.6 CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <!-- Ícones do Bootstrap -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #f8f9fa;
+            color: #333;
+            min-height: 100vh;
+        }
+
+        /* SOMBRA AO ABRIR SIDEBAR (OVERLAY) */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 1040;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* BARRA LATERAL (SIDEBAR OFF-CANVAS) */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: -280px;
+            width: 280px;
+            height: 100vh;
+            background-color: #1e293b;
+            color: #fff;
+            z-index: 1050;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 4px 0 12px rgba(0,0,0,0.15);
+        }
+
+        .sidebar.active {
+            left: 0;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #334155;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .btn-close-sidebar {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        .btn-close-sidebar:hover {
+            color: #fff;
+        }
+
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            padding: 15px 10px;
+            gap: 5px;
+            flex-grow: 1;
+        }
+
+        .sidebar-nav .nav-item-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            color: #94a3b8;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-nav .nav-item-link:hover {
+            background-color: #334155;
+            color: #fff;
+        }
+
+        .sidebar-footer {
+            padding: 15px 20px;
+            border-top: 1px solid #334155;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #0f172a;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-details {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+
+        .user-name {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .user-role {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        /* MENU SUPERIOR (TOPBAR) */
+        .topbar {
+            height: 65px;
+            background-color: #fff;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 25px;
+            position: sticky;
+            top: 0;
+            z-index: 1030;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .btn-toggle-sidebar {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #334155;
+            cursor: pointer;
+            padding: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-box {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            color: #94a3b8;
+        }
+
+        .search-box input {
+            padding: 6px 12px 6px 36px;
+            border: 1px solid #cbd5e1;
+            border-radius: 20px;
+            width: 260px;
+            outline: none;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+
+        .search-box input:focus {
+            border-color: #0284c7;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            color: #64748b;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .badge-dot {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 8px;
+            height: 8px;
+            background-color: #ef4444;
+            border-radius: 50%;
+        }
+
+        /* ÁREA PRINCIPAL */
+        main {
+            padding: 30px;
+        }
+    </style>
 </head>
-<body class="bg-light">
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="{% url 'lotes_listar' %}">🍎 Hortifruti System</a>
-            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav mr-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'lotes_listar' %}">Estoque (Lotes)</a>
-                    </li>
-                </ul>
-                <span class="navbar-text text-white">
-                    Usuário: <strong>{{ user.username }}</strong>
-                </span>
+<body>
+
+    <!-- Overlay de fundo ao abrir a sidebar -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <!-- 1. BARRA LATERAL (SIDEBAR OFF-CANVAS) -->
+    <aside class="sidebar" id="sidebar">
+        <!-- Topo da Sidebar -->
+        <div class="sidebar-header">
+            <div class="logo">
+                <span style="font-size: 1.4rem;">🍎</span>
+                <span>Hortifruti System</span>
             </div>
+            <button class="btn-close-sidebar" onclick="toggleSidebar()">
+                <i class="bi bi-x-lg"></i>
+            </button>
         </div>
-    </nav>
 
-    <main>
-        {% block content %}
-        {% endblock %}
-    </main>
+        <!-- Navegação Principal -->
+        <nav class="sidebar-nav">
+            <a href="{% url 'dashboard' %}" class="nav-item-link">
+                <i class="bi bi-boxes"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="{% url 'lotes_listar' %}" class="nav-item-link">
+                <i class="bi bi-boxes"></i>
+                <span>Estoque (Lotes)</span>
+            </a>
+            <a href="{% url 'catalogo_loja' %}" class="nav-item-link">
+                <i class="bi bi-boxes"></i>
+                <span>Catalogo de Pedido</span>
+            </a>
+            <small class="text-uppercase text-muted px-3 mb-1 font-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px;">Painel</small>
+            <a href="{% url 'lotes_listar' %}" class="nav-item-link">
+                <i class="bi bi-speedometer2"></i>
+                <span>Início / Lotes</span>
+            </a>
 
+            <!-- GRUPO: ESTOQUE -->
+            <a href="{% url 'lote_criar' %}" class="nav-item-link">
+                <i class="bi bi-box-arrow-in-down"></i>
+                <span>Cadastrar Novo Lote</span>
+            </a>
+            <!-- Adicione novos links aqui no futuro -->
+        </nav>
+
+        <!-- Rodapé da Sidebar (Perfil / Logout) -->
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <i class="bi bi-person-circle" style="font-size: 1.8rem; color: #94a3b8;"></i>
+                <div class="user-details">
+                    <span class="user-name">{{ user.username|default:"Usuário" }}</span>
+                    <span class="user-role">Operador</span>
+                </div>
+            </div>
+            {% if user.is_authenticated %}
+                <a href="{% url 'logout' %}" class="text-danger ml-2" title="Sair">
+                    <i class="bi bi-box-arrow-right" style="font-size: 1.3rem;"></i>
+                </a>
+            {% endif %}
+        </div>
+    </aside>
+
+    <!-- 2. CONTAINER COM TOPBAR E CONTEÚDO PRINCIPAL -->
+    <div class="w-100">
+        <!-- Topbar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="btn-toggle-sidebar" onclick="toggleSidebar()" title="Abrir menu">
+                    <i class="bi bi-list"></i>
+                </button>
+                <div class="search-box">
+                    <i class="bi bi-search search-icon"></i>
+                    <input type="text" placeholder="Buscar no sistema...">
+                </div>
+            </div>
+
+            <div class="topbar-right">
+                <button class="btn-icon" title="Notificações">
+                    <i class="bi bi-bell"></i>
+                    <span class="badge-dot"></span>
+                </button>
+                <div class="text-secondary small">
+                    Olá, <strong class="text-dark">{{ user.username|default:"Visitante" }}</strong>
+                </div>
+            </div>
+        </header>
+
+        <!-- 3. CONTEÚDO DINÂMICO (MAIN CONTENT) -->
+        <main class="container-fluid">
+            {% block content %}
+            {% endblock %}
+        </main>
+    </div>
+
+    <!-- Scripts do Bootstrap 4 e Controle da Sidebar -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+    </script>
 </body>
 </html>

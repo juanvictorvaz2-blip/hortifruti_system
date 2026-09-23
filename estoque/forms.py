@@ -28,9 +28,6 @@ class LoteEntradaForm(forms.ModelForm):
                     'placeholder': 'Deixe em branco para usar a Qtd Inicial',
                 }
             ),
-            'data_validade': forms.DateInput(
-                attrs={'class': 'form-control', 'type': 'date'}
-            ),
             'local_armazenado': forms.Select(
                 attrs={'class': 'form-control'},
                 choices=Fruta.TIPO_ARMAZEM_CHOICES,
@@ -39,8 +36,11 @@ class LoteEntradaForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Torna a quantidade_atual opcional na tela
+        # Torna os campos opcionais na tela para agilizar o preenchimento
         self.fields['quantidade_atual'].required = False
+        self.fields['data_validade'].required = False
+        self.fields['local_armazenado'].required = False
+
 class SaidaEstoqueForm(forms.ModelForm):
     class Meta:
         model = SaidaEstoque
@@ -48,7 +48,6 @@ class SaidaEstoqueForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Filtra para exibir apenas lotes que ainda possuem estoque disponível
         self.fields['lote'].queryset = LoteEntrada.objects.filter(quantidade_atual__gt=0)
 
 class BaixaLoteForm(forms.ModelForm):

@@ -1,5 +1,5 @@
 from datetime import timedelta
-
+from datetime import date, timedelta
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
@@ -69,21 +69,30 @@ def lote_criar(request):
         form = LoteEntradaForm(request.POST)
         if form.is_valid():
             lote = form.save(commit=False)
-            if lote.quantidade_atual is None:
+            fruta = lote.fruta
+
+            # 1. Copia a quantidade_inicial para a quantidade_atual se estiver em branco
+            if not lote.quantidade_atual:
                 lote.quantidade_atual = lote.quantidade_inicial
+
+            # 2. Copia o local de armazenamento padrão da Fruta (se o usuário não selecionou)
+            if not lote.local_armazenado and hasattr(fruta, 'local_armazenado'):
+                lote.local_armazenado = fruta.local_armazenado
+
+            # 3. Calcula a data de validade usando os dias de validade da Fruta
+            # (Substitua 'dias_validade' pelo nome do campo no model Fruta, se for diferente)
+            if not lote.data_validade and hasattr(fruta, 'dias_validade') and fruta.dias_validade:
+                lote.data_validade = date.today() + timedelta(days=fruta.dias_validade)
+            elif not lote.data_validade:
+                lote.data_validade = date.today() + timedelta(days=7)  # Padrão de 7 dias caso a fruta não tenha o campo
+
             lote.save()
-            messages.success(request, 'Lote cadastrado com sucesso!')
-            return redirect('lotes_listar')
-        else:
-            messages.error(
-                request,
-                'Erro ao salvar o lote. Verifique os campos abaixo.',
-            )
+            messages.success(request, f'Lote de {fruta.nome} cadastrado com sucesso!')
+            return redirect('dashboard')
     else:
         form = LoteEntradaForm()
 
     return render(request, 'estoque/lote_form.html', {'form': form})
-
 
 @login_required
 def dinamica_saida(request):
