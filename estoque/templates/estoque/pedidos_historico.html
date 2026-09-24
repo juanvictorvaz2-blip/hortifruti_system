@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <!-- Cabeçalho & Cards Informativos -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>📋 Histórico e Relatório de Pedidos</h2>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-primary text-white p-3">
+                <div class="small opacity-75">Total de Pedidos</div>
+                <div class="fs-3 fw-bold">{{ total_pedidos }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-success text-white p-3">
+                <div class="small opacity-75">Concluídos (Entregues)</div>
+                <div class="fs-3 fw-bold">{{ pedidos_concluidos }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-warning text-dark p-3">
+                <div class="small opacity-75">Em Separação / Confirmados</div>
+                <div class="fs-3 fw-bold">{{ pedidos_pendentes }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-dark text-white p-3">
+                <div class="small opacity-75">Valor Total Concluído</div>
+                <div class="fs-3 fw-bold">R$ {{ total_faturado|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de Filtros -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Data Inicial</label>
+                    <input type="date" name="data_inicio" value="{{ data_inicio }}" class="form-control">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Data Final</label>
+                    <input type="date" name="data_fim" value="{{ data_fim }}" class="form-control">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="CONFIRMADO" {% if status_filtro == 'CONFIRMADO' %}selected{% endif %}>Confirmado / Em Separação</option>
+                        <option value="CONCLUIDO" {% if status_filtro == 'CONCLUIDO' %}selected{% endif %}>Concluído</option>
+                        <option value="CANCELADO" {% if status_filtro == 'CANCELADO' %}selected{% endif %}>Cancelado</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Loja</label>
+                    <select name="loja" class="form-select">
+                        <option value="">Todas as Lojas</option>
+                        {% for loja in lojas %}
+                            <option value="{{ loja.id }}" {% if loja_id == loja.id|stringformat:"s" %}selected{% endif %}>{{ loja.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Canal</label>
+                    <select name="canal" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="LOJA" {% if canal_filtro == 'LOJA' %}selected{% endif %}>🏬 Loja</option>
+                        <option value="TELEFONE" {% if canal_filtro == 'TELEFONE' %}selected{% endif %}>📞 WhatsApp / Fone</option>
+                        <option value="IFOOD" {% if canal_filtro == 'IFOOD' %}selected{% endif %}>🛵 iFood</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+                    <a href="{% url 'pedidos_historico' %}?filtrar=todos" class="btn btn-outline-secondary">Limpar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabela do Histórico -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Código</th>
+                            <th>Data/Hora</th>
+                            <th>Canal / Origem</th>
+                            <th>Solicitante / Cliente</th>
+                            <th>Responsável</th>
+                            <th>Valor Total</th>
+                            <th>Status</th>
+                            <th class="text-end">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pedido in pedidos %}
+                        <tr>
+                            <td><strong>#{{ pedido.codigo_pedido }}</strong></td>
+                            <td>{{ pedido.data_criacao|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                <span class="badge bg-light text-dark border">
+                                    {{ pedido.get_canal_venda_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {{ pedido.cliente_nome }}
+                                {% if pedido.loja_solicitante %}
+                                    <br><small class="text-muted">🏬 {{ pedido.loja_solicitante.nome }}</small>
+                                {% endif %}
+                            </td>
+                            <td><small class="text-muted">{{ pedido.usuario.get_full_name|default:pedido.usuario.username|default:"SISTEMA" }}</small></td>
+                            <td><strong>R$ {{ pedido.valor_total }}</strong></td>
+                            <td>
+                                {% if pedido.status == 'CONCLUIDO' %}
+                                    <span class="badge bg-success">Concluído</span>
+                                {% elif pedido.status == 'CONFIRMADO' %}
+                                    <span class="badge bg-warning text-dark">Em Separação</span>
+                                {% elif pedido.status == 'CANCELADO' %}
+                                    <span class="badge bg-danger">Cancelado</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ pedido.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#detalhes-{{ pedido.id }}">
+                                    Ver Itens ({{ pedido.itens.count }})
+                                </button>
+                            </td>
+                        </tr>
+
+                        <!-- Linha com a div colapsável por dentro -->
+                        <tr>
+                            <td colspan="8" class="p-0 border-0 bg-light">
+                                <div class="collapse" id="detalhes-{{ pedido.id }}">
+                                    <div class="p-3">
+                                        <div class="card card-body border-0 shadow-sm">
+                                            <h6 class="fw-bold mb-3">Itens do Pedido #{{ pedido.codigo_pedido }}</h6>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-bordered bg-white mb-0">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th>Produto / Fruta</th>
+                                                            <th>Quantidade</th>
+                                                            <th>Preço Unitário</th>
+                                                            <th>Subtotal</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for item in pedido.itens.all %}
+                                                        <tr>
+                                                            <td>{{ item.fruta.nome }}</td>
+                                                            <td>{{ item.quantidade }} Kg/Unid.</td>
+                                                            <td>R$ {{ item.preco_unitario }}</td>
+                                                            <td>R$ {{ item.subtotal }}</td>
+                                                        </tr>
+                                                        {% empty %}
+                                                        <tr>
+                                                            <td colspan="4" class="text-muted text-center">Nenhum item encontrado.</td>
+                                                        </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-muted">
+                                Nenhum pedido encontrado para o período/filtro selecionado.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -31,4 +31,5 @@ urlpatterns = [
     # Detalhes e Separação de Pedidos
     path('pedido/<int:pedido_id>/', views.pedido_detalhe, name='pedido_detalhe'),
     path('deposito/separar/<int:pedido_id>/', views.separar_pedido, name='separar_pedido'),
+    path('pedidos/historico/', views.pedidos_historico, name='pedidos_historico'),
 ]
