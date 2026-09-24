@@ -7,7 +7,6 @@ from django.db.models import F, Sum
 from django.utils import timezone
 
 
-# Declare a classe Loja apenas UMA vez no topo
 class Loja(models.Model):
     nome = models.CharField(max_length=100)
     endereco = models.CharField(
@@ -59,7 +58,8 @@ class Fruta(models.Model):
 
 
 class LoteEntrada(models.Model):
-    codigo_lote = models.CharField(max_length=50, unique=True)
+    # CORREÇÃO: blanck=True para permitir que o método save() gere automaticamente
+    codigo_lote = models.CharField(max_length=50, unique=True, blank=True)
     fruta = models.ForeignKey(Fruta, on_delete=models.CASCADE, related_name='lotes')
     quantidade_inicial = models.DecimalField(max_digits=10, decimal_places=2)
     quantidade_atual = models.DecimalField(max_digits=10, decimal_places=2)
@@ -70,6 +70,17 @@ class LoteEntrada(models.Model):
         choices=Fruta.TIPO_ARMAZEM_CHOICES,
         default='DEPOSITO'
     )
+
+    # ADICIONADO: Garante que todo lote ganhe um código único automático se estiver em branco
+    def save(self, *args, **kwargs):
+        if not self.codigo_lote:
+            sufixo = uuid.uuid4().hex[:6].upper()
+            self.codigo_lote = f"LOTE-{timezone.now().strftime('%Y%m%d')}-{sufixo}"
+
+        if self.quantidade_atual is None:
+            self.quantidade_atual = self.quantidade_inicial
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f'{self.codigo_lote} - {self.fruta.nome}'
@@ -137,7 +148,6 @@ class Pedido(models.Model):
         default='LOJA',
         verbose_name='Canal de Venda',
     )
-    # CAMPO NOVO ADICIONADO AQUI:
     loja_solicitante = models.ForeignKey(
         Loja,
         on_delete=models.SET_NULL,
@@ -191,6 +201,7 @@ class Pedido(models.Model):
     def __str__(self):
         loja_str = f" ({self.loja_solicitante.nome})" if self.loja_solicitante else ""
         return f'{self.codigo_pedido} - {self.cliente_nome}{loja_str}'
+
 
 class ItemPedido(models.Model):
     pedido = models.ForeignKey(
