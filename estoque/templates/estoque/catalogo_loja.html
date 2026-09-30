@@ -2,7 +2,15 @@
 
 {% block content %}
 <div class="container my-4">
-    <h2 class="mb-4"><i class="bi bi-cart-plus"></i> Solicitacao de Produtos para Lojas</h2>
+    <!-- Cabeçalho com o botão de enviar o catálogo inteiro -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+        <h2><i class="bi bi-cart-plus"></i> Solicitação de Produtos para Lojas</h2>
+
+        <!-- Botão para enviar o catálogo atualizado para o chefe -->
+        <a href="{{ whatsapp_catalogo_url }}" target="_blank" class="btn btn-success shadow-sm font-weight-bold">
+            <i class="bi bi-whatsapp mr-1"></i> Enviar Catálogo de Estoque para o Chefe
+        </a>
+    </div>
 
     {% if messages %}
         {% for message in messages %}
@@ -14,37 +22,120 @@
     {% endif %}
 
     <div class="row">
-        <!-- Coluna Esquerda: Catálogo de Frutas (A-Z) -->
+        <!-- Coluna Esquerda: Catálogo Separado por Categorias -->
         <div class="col-lg-7 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-success text-white">
-                    <h5 class="card-title mb-0">Frutas Disponiveis no Deposito (Ordem Alfabetica)</h5>
+
+            <!-- Bloco de Frutas -->
+            {% if frutas %}
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-warning text-dark font-weight-bold">
+                    <h5 class="card-title mb-0">🍎 Frutas Disponíveis</h5>
                 </div>
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush">
-                        {% for produto in produtos %}
-    <div class="d-flex justify-content-between align-items-center mb-3 p-2 border-bottom">
-        <div>
-            <h6 class="mb-0 font-weight-bold">{{ produto.nome }}</h6>
-            <small class="text-muted">
-                Saldo disponível: <strong>{{ produto.total_estoque }}</strong>
-            </small>
-        </div>
-
-        <form action="{% url 'adicionar_ao_carrinho' produto.id %}" method="POST" class="d-flex align-items-center">
-            {% csrf_token %}
-            <!-- Caixa para selecionar a quantidade com limite máximo do estoque -->
-            <input type="number" name="quantidade" value="1" min="1" max="{{ produto.total_estoque }}" class="form-control form-control-sm me-2" style="width: 70px;">
-            <button type="submit" class="btn btn-sm btn-outline-success">Adicionar</button>
-        </form>
-    </div>
-{% endfor %}
+                        {% for produto in frutas %}
+                            <div class="d-flex justify-content-between align-items-center mb-3 p-3 border-bottom">
+                                <div>
+                                    <h6 class="mb-0 font-weight-bold">{{ produto.nome }}</h6>
+                                    <small class="text-muted">Saldo disponível: <strong>{{ produto.total_estoque }}</strong></small>
+                                </div>
+                                <form action="{% url 'adicionar_ao_carrinho' produto.id %}" method="POST" class="d-flex align-items-center">
+                                    {% csrf_token %}
+                                    <input type="number" name="quantidade" value="1" min="1" max="{{ produto.total_estoque }}" class="form-control form-control-sm me-2" style="width: 70px;">
+                                    <button type="submit" class="btn btn-sm btn-outline-success">Adicionar</button>
+                                </form>
+                            </div>
+                        {% endfor %}
                     </div>
                 </div>
             </div>
+            {% endif %}
+
+            <!-- Bloco de Legumes -->
+            {% if legumes %}
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">🥕 Legumes Disponíveis</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for produto in legumes %}
+                            <div class="d-flex justify-content-between align-items-center mb-3 p-3 border-bottom">
+                                <div>
+                                    <h6 class="mb-0 font-weight-bold">{{ produto.nome }}</h6>
+                                    <small class="text-muted">Saldo disponível: <strong>{{ produto.total_estoque }}</strong></small>
+                                </div>
+                                <form action="{% url 'adicionar_ao_carrinho' produto.id %}" method="POST" class="d-flex align-items-center">
+                                    {% csrf_token %}
+                                    <input type="number" name="quantidade" value="1" min="1" max="{{ produto.total_estoque }}" class="form-control form-control-sm me-2" style="width: 70px;">
+                                    <button type="submit" class="btn btn-sm btn-outline-success">Adicionar</button>
+                                </form>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Bloco de Verduras -->
+            {% if verduras %}
+            <div class="card shadow-sm mb-3">
+                <div class="card-header text-white" style="background-color: #20c997;">
+                    <h5 class="card-title mb-0">🥬 Verduras Disponíveis</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for produto in verduras %}
+                            <div class="d-flex justify-content-between align-items-center mb-3 p-3 border-bottom">
+                                <div>
+                                    <h6 class="mb-0 font-weight-bold">{{ produto.nome }}</h6>
+                                    <small class="text-muted">Saldo disponível: <strong>{{ produto.total_estoque }}</strong></small>
+                                </div>
+                                <form action="{% url 'adicionar_ao_carrinho' produto.id %}" method="POST" class="d-flex align-items-center">
+                                    {% csrf_token %}
+                                    <input type="number" name="quantidade" value="1" min="1" max="{{ produto.total_estoque }}" class="form-control form-control-sm me-2" style="width: 70px;">
+                                    <button type="submit" class="btn btn-sm btn-outline-success">Adicionar</button>
+                                </form>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Bloco de Outros / Insumos -->
+            {% if outros %}
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="card-title mb-0">📦 Outros / Insumos Disponíveis</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for produto in outros %}
+                            <div class="d-flex justify-content-between align-items-center mb-3 p-3 border-bottom">
+                                <div>
+                                    <h6 class="mb-0 font-weight-bold">{{ produto.nome }}</h6>
+                                    <small class="text-muted">Saldo disponível: <strong>{{ produto.total_estoque }}</strong></small>
+                                </div>
+                                <form action="{% url 'adicionar_ao_carrinho' produto.id %}" method="POST" class="d-flex align-items-center">
+                                    {% csrf_token %}
+                                    <input type="number" name="quantidade" value="1" min="1" max="{{ produto.total_estoque }}" class="form-control form-control-sm me-2" style="width: 70px;">
+                                    <button type="submit" class="btn btn-sm btn-outline-success">Adicionar</button>
+                                </form>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if not frutas and not legumes and not verduras and not outros %}
+                <div class="alert alert-warning text-center">Nenhum produto com saldo disponível no depósito no momento.</div>
+            {% endif %}
+
         </div>
 
-        <!-- Coluna Direita: Carrinho & Finalização do Pedido -->
+        <!-- Coluna Direita: Carrinho & Finalização do Pedido (Inalterada e funcional) -->
         <div class="col-lg-5">
             <div class="card shadow-sm border-primary">
                 <div class="card-header bg-primary text-white">

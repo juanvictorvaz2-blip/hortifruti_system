@@ -10,6 +10,10 @@ class LoteEntradaForm(forms.ModelForm):
             'fruta',
             'quantidade_inicial',
             'quantidade_atual',
+            'preco_custo',
+            'preco_venda_caixa',
+            'preco_venda_banca',
+            'lojas_destinatarias',
             'data_validade',
             'local_armazenado',
         ]
@@ -29,6 +33,33 @@ class LoteEntradaForm(forms.ModelForm):
                     'placeholder': 'Deixe em branco para usar a Qtd Inicial',
                 }
             ),
+            'preco_custo': forms.NumberInput(
+                attrs={
+                    'class': 'form-control',
+                    'step': '0.01',
+                    'placeholder': '0.00',
+                }
+            ),
+            'preco_venda_caixa': forms.NumberInput(
+                attrs={
+                    'class': 'form-control',
+                    'step': '0.01',
+                    'placeholder': '0.00',
+                }
+            ),
+            'preco_venda_banca': forms.NumberInput(
+                attrs={
+                    'class': 'form-control',
+                    'step': '0.01',
+                    'placeholder': '0.00',
+                }
+            ),
+            'lojas_destinatarias': forms.CheckboxSelectMultiple(
+                attrs={'class': 'list-unstyled'}
+            ),
+            'data_validade': forms.DateInput(
+                attrs={'class': 'form-control', 'type': 'date'}
+            ),
             'local_armazenado': forms.Select(
                 attrs={'class': 'form-control'},
                 choices=Fruta.TIPO_ARMAZEM_CHOICES,
@@ -37,10 +68,13 @@ class LoteEntradaForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Torna os campos opcionais na tela para agilizar o preenchimento
         self.fields['quantidade_atual'].required = False
         self.fields['data_validade'].required = False
         self.fields['local_armazenado'].required = False
+        self.fields['preco_custo'].required = False
+        self.fields['preco_venda_caixa'].required = False
+        self.fields['preco_venda_banca'].required = False
+        self.fields['lojas_destinatarias'].required = False
 
 class SaidaEstoqueForm(forms.ModelForm):
     class Meta:

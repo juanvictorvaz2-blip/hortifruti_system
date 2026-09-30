@@ -1,25 +1,54 @@
 {% extends 'base.html' %}
 
-{% block content %}
-<div class="container my-4" style="max-width: 600px;">
-    <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white">
-            <h4 class="mb-0">Cadastrar Novo Lote</h4>
-        </div>
-        <div class="card-body">
+{% block title %}{% if lote %}Editar Lote: {{ lote.codigo_lote }}{% else %}Cadastrar Novo Lote{% endif %}{% endblock %}
 
+{% block content %}
+<div class="container my-5" style="max-width: 750px;">
+    <!-- Cabeçalho de Navegação Rápida -->
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h2 class="font-weight-bold text-dark mb-1">
+                <i class="bi bi-box-seam text-primary mr-2"></i>
+                {% if lote %}Editar Lote <span class="text-muted font-weight-light" style="font-size: 1.2rem;">({{ lote.codigo_lote }})</span>{% else %}Novo Lote de Entrada{% endif %}
+            </h2>
+            <p class="text-muted small mb-0">Gerencie os dados de estoque, preços e distribuição para as lojas.</p>
+        </div>
+        <a href="{% url 'lotes_listar' %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+            <i class="bi bi-arrow-left"></i> Voltar à Lista
+        </a>
+    </div>
+
+    <div class="card shadow border-0 rounded-lg">
+        <div class="card-header bg-gradient bg-primary text-white py-3 px-4 rounded-top">
+            <h5 class="mb-0 font-weight-semibold">
+                <i class="bi bi-sliders mr-2"></i> Formulário de Configuração do Lote
+            </h5>
+        </div>
+
+        <div class="card-body p-4 bg-white">
+
+            <!-- Mensagens de Feedback -->
             {% if messages %}
                 {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                        {{ message }}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+                        <i class="bi bi-info-circle-fill mr-1"></i> {{ message }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
                     </div>
                 {% endfor %}
             {% endif %}
 
+            <!-- Alerta de Erros do Formulário -->
             {% if form.errors %}
-                <div class="alert alert-danger">
-                    <strong>Por favor, corrija os erros abaixo:</strong>
-                    <ul class="mb-0 mt-2">
+                <div class="alert alert-danger shadow-sm border-left-danger">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-exclamation-triangle-fill fs-4 mr-2"></i>
+                        <div>
+                            <strong>Atenção:</strong> Por favor, corrija os erros abaixo antes de salvar.
+                        </div>
+                    </div>
+                    <ul class="mb-0 mt-2 pl-3 small">
                         {% for field in form %}
                             {% for error in field.errors %}
                                 <li><strong>{{ field.label }}:</strong> {{ error }}</li>
@@ -29,36 +58,72 @@
                 </div>
             {% endif %}
 
-            <form method="post">
+            <form method="post" novalidate>
                 {% csrf_token %}
 
-                <div class="form-group mb-3">
-                    <label>Fruta / Produto</label>
-                    {{ form.fruta }}
+                <!-- Renderização Dinâmica e Organizada dos Campos -->
+                <div class="row">
+                    {% for field in form %}
+                        {% if field.name == 'lojas_destinatarias' %}
+                            <!-- Campo de Lojas em Destaque (Largura Total) -->
+                            <div class="col-1://12 form-group mb-4 bg-light p-3 rounded border">
+                                <label class="font-weight-bold text-dark d-block mb-2">
+                                    <i class="bi bi-shop text-info mr-1"></i> {{ field.label }}
+                                </label>
+                                <div class="row pl-2">
+                                    {{ field }}
+                                </div>
+                                {% if field.help_text %}
+                                    <small class="form-text text-muted mt-2">{{ field.help_text }}</small>
+                                {% endif %}
+                                {% for error in field.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <!-- Campos Normais (Grid Dividido) -->
+                            <div class="col-md-6 form-group mb-3">
+                                <label class="font-weight-bold text-secondary small text-uppercase tracking-wide">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.help_text %}
+                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                {% endif %}
+                                {% for error in field.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
                 </div>
 
-                <div class="form-group mb-3">
-                    <label>Quantidade Inicial (Kg ou Caixas)</label>
-                    {{ form.quantidade_inicial }}
-                </div>
-
-                <div class="form-group mb-3">
-                    <label>Quantidade Atual (Opcional)</label>
-                    {{ form.quantidade_atual }}
-                    <small class="form-text text-muted">Se deixar em branco, será igual à quantidade inicial.</small>
-                </div>
-
-                <div class="form-group mb-3">
-                    <label>Local de Armazenamento</label>
-                    {{ form.local_armazenado }}
-                </div>
-
-                <div class="d-flex justify-content-between mt-4">
-                    <a href="{% url 'lotes_listar' %}" class="btn btn-secondary">Voltar</a>
-                    <button type="submit" class="btn btn-success">Salvar Lote</button>
+                <!-- Botões de Ação do Rodapé -->
+                <hr class="my-4">
+                <div class="d-flex justify-content-end align-items-center gap-2">
+                    <a href="{% url 'lotes_listar' %}" class="btn btn-light border px-4 mr-2">
+                        Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-success px-4 font-weight-bold shadow-sm">
+                        <i class="bi bi-check-lg mr-1"></i> Salvar Alterações
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+<style>
+    /* Estilização extra para alinhar os checkboxes de lojas se necessário */
+    .form-group ul {
+        list-style: none;
+        padding-left: 0;
+    }
+    .form-group ul li {
+        margin-bottom: 6px;
+    }
+    .form-group ul li label {
+        font-weight: normal !important;
+        margin-left: 6px;
+        cursor: pointer;
+    }
+</style>
 {% endblock %}

@@ -23,7 +23,20 @@ class Fruta(models.Model):
         ('CAMARA_FRIA', 'Câmara Fria'),
     ]
 
+    CATEGORIA_CHOICES = [
+        ('FRUTA', 'Frutas'),
+        ('LEGUME', 'Legumes'),
+        ('VERDURA', 'Verduras'),
+        ('OUTRO', 'Outros / Insumos'),
+    ]
+
     nome = models.CharField(max_length=100)
+    categoria = models.CharField(
+        max_length=20,
+        choices=CATEGORIA_CHOICES,
+        default='FRUTA',
+        verbose_name="Categoria do Produto"
+    )
     dias_validade_padrao = models.PositiveIntegerField(
         help_text='Validade média em dias após a colheita/recebimento'
     )
@@ -32,8 +45,7 @@ class Fruta(models.Model):
     )
 
     def __str__(self):
-        return self.nome
-
+        return f"{self.nome} ({self.get_categoria_display()})"
     @property
     def estoque_fisico(self):
         total = LoteEntrada.objects.filter(fruta=self).aggregate(
@@ -58,11 +70,17 @@ class Fruta(models.Model):
 
 
 class LoteEntrada(models.Model):
-    # CORREÇÃO: blanck=True para permitir que o método save() gere automaticamente
     codigo_lote = models.CharField(max_length=50, unique=True, blank=True)
     fruta = models.ForeignKey(Fruta, on_delete=models.CASCADE, related_name='lotes')
     quantidade_inicial = models.DecimalField(max_digits=10, decimal_places=2)
     quantidade_atual = models.DecimalField(max_digits=10, decimal_places=2)
+
+    # NOVOS CAMPOS PARA PREÇOS E LOJAS NO LOTE
+    preco_custo = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name="Preço de Custo (R$)")
+    preco_venda_caixa = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name="Preço Venda (Caixa)")
+    preco_venda_banca = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name="Preço Venda (Banca)")
+    lojas_destinatarias = models.ManyToManyField(Loja, blank=True, verbose_name="Lojas Autorizadas")
+
     data_entrada = models.DateTimeField(auto_now_add=True)
     data_validade = models.DateField(null=True, blank=True)
     local_armazenado = models.CharField(
@@ -71,7 +89,6 @@ class LoteEntrada(models.Model):
         default='DEPOSITO'
     )
 
-    # ADICIONADO: Garante que todo lote ganhe um código único automático se estiver em branco
     def save(self, *args, **kwargs):
         if not self.codigo_lote:
             sufixo = uuid.uuid4().hex[:6].upper()
@@ -84,7 +101,6 @@ class LoteEntrada(models.Model):
 
     def __str__(self):
         return f'{self.codigo_lote} - {self.fruta.nome}'
-
 
 class SaidaEstoque(models.Model):
     lote = models.ForeignKey(

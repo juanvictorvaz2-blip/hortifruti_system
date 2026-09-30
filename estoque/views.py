@@ -1,3 +1,4 @@
+import urllib.parse
 from datetime import date, timedelta
 from decimal import Decimal
 
@@ -279,12 +280,45 @@ def lote_dar_baixa(request, pk):
     )
 
 
+from django.db.models import Sum
+from django.shortcuts import render
+from .models import Fruta, Loja
 def catalogo_loja(request):
-    produtos = Fruta.objects.filter(
+    produtos_base = Fruta.objects.filter(
         lotes__quantidade_atual__gt=0
     ).annotate(
         total_estoque=Sum('lotes__quantidade_atual')
     ).distinct().order_by('nome')
+
+    frutas = produtos_base.filter(categoria='FRUTA')
+    legumes = produtos_base.filter(categoria='LEGUME')
+    verduras = produtos_base.filter(categoria='VERDURA')
+    outros = produtos_base.filter(categoria='OUTRO')
+
+    # --- MONTAGEM DO TEXTO DO CATÁLOGO PARA O WHATSAPP ---
+    texto_catalogo = "📋 *RELATÓRIO DE ESTOQUE ATUAL - DEPÓSITO*\n"
+    texto_catalogo += "Segue a lista de produtos disponíveis para análise de compras:\n\n"
+
+    categorias = [
+        ("🍎 FRUTAS", frutas),
+        ("🥕 LEGUMES", legumes),
+        ("🥬 VERDURAS", verduras),
+        ("📦 OUTROS / INSUMOS", outros),
+    ]
+
+    for titulo, queryset in categorias:
+        if queryset.exists():
+            texto_catalogo += f"*{titulo}*\n"
+            for item in queryset:
+                texto_catalogo += f"• {item.nome}: *{item.total_estoque} un*\n"
+            texto_catalogo += "\n"
+
+    texto_catalogo += "_Atualizado em tempo real pelo sistema._"
+
+    # Substitua pelo número de WhatsApp do seu chefe (com DDI e DDD, ex: 5513999999999)
+    # Se deixar o número vazio (''), o WhatsApp vai perguntar para quem deseja enviar.
+    whatsapp_catalogo_url = f"https://api.whatsapp.com/send?phone=5545999512946&text={urllib.parse.quote(texto_catalogo)}"
+    # -----------------------------------------------------
 
     carrinho_sessao = request.session.get('carrinho', {})
     carrinho_itens = []
@@ -302,12 +336,15 @@ def catalogo_loja(request):
     lojas = Loja.objects.all()
 
     context = {
-        'produtos': produtos,
+        'frutas': frutas,
+        'legumes': legumes,
+        'verduras': verduras,
+        'outros': outros,
         'carrinho_itens': carrinho_itens,
         'lojas': lojas,
+        'whatsapp_catalogo_url': whatsapp_catalogo_url, # Passando o link para o template
     }
     return render(request, 'estoque/catalogo_loja.html', context)
-
 
 def adicionar_ao_carrinho(request, produto_id):
     fruta = get_object_or_404(Fruta, id=produto_id)
@@ -569,19 +606,26 @@ def realizar_conferencia_compra(request, pk):
                 compra.status = 'CONFERIDO'
                 compra.save()
 
-                # CRIAÇÃO AUTOMÁTICA DO LOTE DE ENTRADA (sem o campo preco_custo)
                 dias_validade = getattr(compra.fruta, 'dias_validade_padrao', 7) or 7
                 data_val = timezone.now().date() + timedelta(days=dias_validade)
                 armazem = getattr(compra.fruta, 'armazem_recomendado', 'DEPOSITO') or 'DEPOSITO'
 
-                LoteEntrada.objects.create(
+                # CRIAÇÃO DO LOTE COM OS PREÇOS E DADOS DA COMPRA
+                lote = LoteEntrada.objects.create(
                     fruta=compra.fruta,
                     quantidade_inicial=compra.quantidade_comprada,
                     quantidade_atual=compra.quantidade_comprada,
+                    preco_custo=compra.preco_custo,
+                    preco_venda_caixa=compra.preco_venda_caixa,
+                    preco_venda_banca=compra.preco_venda_banca,
                     data_validade=data_val,
                     local_armazenado=armazem,
                     codigo_lote=f"CEASA-{compra.id}-{timezone.now().strftime('%d%m%Y')}"
                 )
+
+                # Copia as lojas destinatárias da CompraCeasa para o LoteEntrada (ManyToManyField)
+                if hasattr(compra, 'lojas_destinatarias') and compra.lojas_destinatarias.exists():
+                    lote.lojas_destinatarias.set(compra.lojas_destinatarias.all())
 
             messages.success(request, f"Compra #{compra.id} conferida e Lote gerado no estoque com sucesso!")
             return redirect('listar_compras_conferencia')
