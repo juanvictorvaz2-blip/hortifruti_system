@@ -32,4 +32,9 @@ urlpatterns = [
     path('pedido/<int:pedido_id>/', views.pedido_detalhe, name='pedido_detalhe'),
     path('deposito/separar/<int:pedido_id>/', views.separar_pedido, name='separar_pedido'),
     path('pedidos/historico/', views.pedidos_historico, name='pedidos_historico'),
+
+    path('compras/nova/', views.registrar_compra_ceasa, name='registrar_compra_ceasa'),
+    path('compras/lista/', views.registrar_compra_ceasa, name='lista_compras_ceasa'),
+    path('compras/conferencia/', views.listar_compras_conferencia, name='listar_compras_conferencia'),
+    path('compras/conferencia/<int:pk>/', views.realizar_conferencia_compra, name='realizar_conferencia_compra'),
 ]

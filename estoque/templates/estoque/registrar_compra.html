@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid py-4 px-md-5">
+    <!-- Cabeçalho da Página -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">🛒 Nova Compra </h2>
+            <p class="text-muted mb-0">Registre os produtos comprados e defina os destinos e margens de venda.</p>
+        </div>
+        <a href="/" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Voltar ao Início
+        </a>
+    </div>
+
+    <!-- Formulário Principal -->
+    <form method="post" class="needs-validation" novalidate>
+        {% csrf_token %}
+
+        <div class="row g-4">
+
+            <!-- SEÇÃO 1: Identificação do Produto -->
+            <div class="col-12">
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                    <div class="card-header bg-light py-3 px-4 border-0">
+                        <h5 class="fw-semibold text-primary mb-0">
+                            <i class="bi bi-box-seam me-2"></i> 1. Identificação do Produto
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.fruta.id_for_label }}" class="form-label fw-medium text-secondary">Fruta / Produto Existente</label>
+                                {{ form.fruta }}
+                                <div class="form-text">Selecione caso já esteja cadastrado no sistema.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.nome_nova_fruta.id_for_label }}" class="form-label fw-medium text-secondary">OU Cadastrar Nova Variedade</label>
+                                {{ form.nome_nova_fruta }}
+                                <div class="form-text text-muted">{{ form.nome_nova_fruta.help_text }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEÇÃO 2: Quantidades e Precificação -->
+            <div class="col-12">
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                    <div class="card-header bg-light py-3 px-4 border-0">
+                        <h5 class="fw-semibold text-success mb-0">
+                            <i class="bi bi-cash-coin me-2"></i> 2. Quantidade e Precificação
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label for="{{ form.quantidade_comprada.id_for_label }}" class="form-label fw-medium text-secondary">Quantidade Comprada</label>
+                                {{ form.quantidade_comprada }}
+                            </div>
+                            <div class="col-md-3">
+                                <label for="{{ form.preco_custo.id_for_label }}" class="form-label fw-medium text-secondary">Preço de Custo (R$)</label>
+                                {{ form.preco_custo }}
+                            </div>
+                            <div class="col-md-3">
+                                <label for="{{ form.preco_venda_caixa.id_for_label }}" class="form-label fw-medium text-secondary">Venda (Caixa Fechada)</label>
+                                {{ form.preco_venda_caixa }}
+                            </div>
+                            <div class="col-md-3">
+                                <label for="{{ form.preco_venda_banca.id_for_label }}" class="form-label fw-medium text-secondary">Venda (Banca / Kg / Dúzia)</label>
+                                {{ form.preco_venda_banca }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEÇÃO 3: Lojas Destinatárias -->
+            <div class="col-12">
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                    <div class="card-header bg-light py-3 px-4 border-0">
+                        <h5 class="fw-semibold text-info mb-0">
+                            <i class="bi bi-shop me-2"></i> 3. Disponibilização para as Lojas
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <p class="text-muted small mb-3">Selecione quais unidades poderão receber e vender este produto:</p>
+
+                        <!-- Caixa customizada para os checkboxes alinhados e modernos -->
+                        <div class="p-3 bg-white border rounded-3 d-flex flex-wrap gap-4">
+                            {% for checkbox in form.lojas_destinatarias %}
+                                <div class="form-check form-switch custom-switch-lg fs-6">
+                                    {{ checkbox.tag }}
+                                    <label class="form-check-label fw-medium ms-2 cursor-pointer" for="{{ checkbox.id_for_label }}">
+                                        {{ checkbox.choice_label }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% if form.lojas_destinatarias.errors %}
+                            <div class="text-danger small mt-1">{{ form.lojas_destinatarias.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botões de Ação -->
+            <div class="col-12 text-end mt-4 mb-5">
+                <a href="/" class="btn btn-light px-4 py-2 border me-2">Cancelar</a>
+                <button type="submit" class="btn btn-success px-5 py-2 fw-semibold shadow-sm">
+                    <i class="bi bi-check-circle me-1"></i> Salvar Compra e Enviar para Conferência
+                </button>
+            </div>
+
+        </div>
+    </form>
+</div>
+{% endblock %}

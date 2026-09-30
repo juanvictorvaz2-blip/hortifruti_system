@@ -244,3 +244,30 @@ class Produto(models.Model):
 
     def __str__(self):
         return self.nome
+
+class CompraCeasa(models.Model):
+    STATUS_COMPRA_CHOICES = [
+        ('PENDENTE', 'Pendente de Conferência'),
+        ('CONFERIDO', 'Conferido e Entrada no Estoque'),
+        ('CANCELADO', 'Cancelado'),
+    ]
+
+    # Se a fruta já existe, vincula. Se não, podemos tratar na View para criar a Fruta na hora.
+    fruta = models.ForeignKey(Fruta, on_delete=models.PROTECT, related_name='compras_ceasa')
+
+    # Caso precise salvar o nome exato digitado caso seja algo totalmente novo
+    nome_produto_digitado = models.CharField(max_length=100, blank=True, null=True)
+
+    quantidade_comprada = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Quantidade Comprada")
+    preco_custo = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Preço de Custo (R$)")
+    preco_venda_caixa = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Preço Venda (Caixa Fechada)")
+    preco_venda_banca = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Preço Venda (Banca / Kg / Dúzia)")
+    # Lojas que podem vender este produto (Muitas Lojas podem receber a mesma compra)
+    lojas_destinatarias = models.ManyToManyField(Loja, verbose_name="Lojas Disponibilizadas")
+
+    status = models.CharField(max_length=20, choices=STATUS_COMPRA_CHOICES, default='PENDENTE')
+    data_compra = models.DateTimeField(auto_now_add=True)
+    responsavel_compra = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+
+    def __str__(self):
+        return f"Compra CEASA: {self.quantidade_comprada}x - Status: {self.get_status_display()}"

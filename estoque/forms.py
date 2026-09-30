@@ -1,6 +1,7 @@
 from django import forms
 from .models import LoteEntrada, SaidaEstoque, Fruta, Loja
 from .models import MovimentacaoEstoque
+from .models import CompraCeasa, Fruta
 
 class LoteEntradaForm(forms.ModelForm):
     class Meta:
@@ -50,6 +51,34 @@ class SaidaEstoqueForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['lote'].queryset = LoteEntrada.objects.filter(quantidade_atual__gt=0)
 
+class CompraCeasaForm(forms.ModelForm):
+    nome_nova_fruta = forms.CharField(
+        max_length=100,
+        required=False,
+        label="Nome da Fruta / Variedade",
+        help_text="Digite se a fruta não estiver na lista abaixo (ex: Maçã Gala 120)."
+    )
+
+    class Meta:
+        model = CompraCeasa
+        fields = [
+            'fruta', 'nome_nova_fruta', 'quantidade_comprada',
+            'preco_custo', 'preco_venda_caixa', 'preco_venda_banca',
+            'lojas_destinatarias'
+        ]
+        widgets = {
+            'fruta': forms.Select(attrs={'class': 'form-select'}),
+            'lojas_destinatarias': forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
+            'quantidade_comprada': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'preco_custo': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'preco_venda_caixa': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'preco_venda_banca': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['fruta'].required = False
+
 class BaixaLoteForm(forms.ModelForm):
     class Meta:
         model = MovimentacaoEstoque
@@ -71,3 +100,4 @@ class BaixaLoteForm(forms.ModelForm):
                 }
             ),
         }
+

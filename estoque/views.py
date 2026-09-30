@@ -1,20 +1,25 @@
-from datetime import timedelta
 from datetime import date, timedelta
+from decimal import Decimal
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models.deletion import ProtectedError  # Ajustado para importação correta
 from django.db import transaction
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.db.models import ProtectedError
-from decimal import Decimal
-from django.db import transaction
 
 # Importação de Forms
-from .forms import BaixaLoteForm, LoteEntradaForm, SaidaEstoqueForm
+from .forms import (
+    BaixaLoteForm,
+    CompraCeasaForm,
+    LoteEntradaForm,
+    SaidaEstoqueForm,
+)
 
 # Importação de Models
 from .models import (
+    CompraCeasa,
     Fruta,
     ItemPedido,
     Loja,
@@ -77,16 +82,15 @@ def lote_criar(request):
             if not lote.quantidade_atual:
                 lote.quantidade_atual = lote.quantidade_inicial
 
-            # 2. Copia o local de armazenamento padrão da Fruta (se o usuário não selecionou)
+            # 2. Copia o local de armazenamento padrão da Fruta
             if not lote.local_armazenado and hasattr(fruta, 'local_armazenado'):
                 lote.local_armazenado = fruta.local_armazenado
 
             # 3. Calcula a data de validade usando os dias de validade da Fruta
-            # (Substitua 'dias_validade' pelo nome do campo no model Fruta, se for diferente)
             if not lote.data_validade and hasattr(fruta, 'dias_validade') and fruta.dias_validade:
                 lote.data_validade = date.today() + timedelta(days=fruta.dias_validade)
             elif not lote.data_validade:
-                lote.data_validade = date.today() + timedelta(days=7)  # Padrão de 7 dias caso a fruta não tenha o campo
+                lote.data_validade = date.today() + timedelta(days=7)  # Padrão de 7 dias
 
             lote.save()
             messages.success(request, f'Lote de {fruta.nome} cadastrado com sucesso!')
@@ -95,6 +99,7 @@ def lote_criar(request):
         form = LoteEntradaForm()
 
     return render(request, 'estoque/lote_form.html', {'form': form})
+
 
 @login_required
 def dinamica_saida(request):
@@ -166,16 +171,13 @@ def historico_saidas(request):
 
 @login_required
 def lotes_listar(request):
-    # Verifica se o usuário pediu para exibir também os lotes zerados (?mostrar_zerados=true)
     mostrar_zerados = request.GET.get('mostrar_zerados') == 'true'
 
-    # Busca base de lotes
     if mostrar_zerados:
         lotes_base = LoteEntrada.objects.all()
     else:
-        lotes_base = LoteEntrada.objects.filter(quantidade_atual__gt=0) # Esconde lotes com quantidade 0
+        lotes_base = LoteEntrada.objects.filter(quantidade_atual__gt=0)
 
-    # Aplica os filtros por local de armazenamento
     lotes_deposito = lotes_base.filter(
         local_armazenado__iexact='DEPOSITO'
     ).order_by('data_validade')
@@ -197,6 +199,7 @@ def lotes_listar(request):
         'mostrar_zerados': mostrar_zerados,
     }
     return render(request, 'estoque/lotes_listar.html', context)
+
 
 @login_required
 def lote_editar(request, pk):
@@ -231,7 +234,7 @@ def lote_excluir(request, pk):
                 request,
                 f"Não é possível excluir o lote {lote.codigo_lote} pois existem saídas de estoque vinculadas a ele."
             )
-        return redirect('lotes_listar')  # Ou a URL para onde deseja redirecionar
+        return redirect('lotes_listar')
 
     return render(request, 'estoque/lote_confirmar_exclusao.html', {'lote': lote})
 
@@ -310,7 +313,6 @@ def adicionar_ao_carrinho(request, produto_id):
     fruta = get_object_or_404(Fruta, id=produto_id)
     quantidade_solicitada = Decimal(request.POST.get('quantidade', 1))
 
-    # Validação contra o estoque DISPONÍVEL (descontando reservas de outros pedidos)
     if quantidade_solicitada > fruta.estoque_disponivel:
         messages.error(
             request,
@@ -319,11 +321,9 @@ def adicionar_ao_carrinho(request, produto_id):
         )
         return redirect('catalogo_loja')
 
-    # Lógica para adicionar/atualizar o item no carrinho da sessão
     carrinho = request.session.get('carrinho', {})
     str_id = str(produto_id)
 
-    # Exemplo simples de atualização no dicionário de sessão
     if str_id in carrinho:
         carrinho[str_id] += float(quantidade_solicitada)
     else:
@@ -332,8 +332,8 @@ def adicionar_ao_carrinho(request, produto_id):
     request.session['carrinho'] = carrinho
     messages.success(request, f'{fruta.nome} adicionado ao carrinho com sucesso!')
 
-    # RETURN OBRIGATÓRIO NO FINAL DA VIEW
     return redirect('catalogo_loja')
+
 
 def remover_do_carrinho(request, produto_id):
     carrinho = request.session.get('carrinho', {})
@@ -364,10 +364,9 @@ def finalizar_pedido(request):
 
         loja = get_object_or_404(Loja, id=loja_id)
 
-        # CRIA O PEDIDO SALVANDO CORRETAMENTE O NOME E A LOJA NOS CAMPOS CERTOS
         pedido = Pedido.objects.create(
             cliente_nome=nome_solicitante,
-            loja_solicitante=loja,  # <--- Vincula à loja correta
+            loja_solicitante=loja,
             usuario=request.user if request.user.is_authenticated else None,
             status='CONFIRMADO'
         )
@@ -379,14 +378,13 @@ def finalizar_pedido(request):
                 pedido=pedido,
                 fruta=fruta,
                 quantidade=Decimal(str(qtd)),
-                preco_unitario=Decimal('0.00')  # Ajuste se tiver o preço da fruta cadastrado
+                preco_unitario=Decimal('0.00')
             )
 
-        # Limpa o carrinho
         request.session['carrinho'] = {}
         messages.success(request, f"Pedido #{pedido.codigo_pedido} enviado com sucesso ao depósito!")
 
-        return redirect('pedidos_historico')  # Redireciona para o histórico recém-criado
+        return redirect('pedidos_historico')
 
     return redirect('catalogo_loja')
 
@@ -405,7 +403,7 @@ def separar_pedido(request, pedido_id):
                 qtd_necessaria = item.quantidade
                 lotes = LoteEntrada.objects.filter(
                     fruta=item.fruta, quantidade_atual__gt=0
-                ).order_by('data_validade')
+                ).order_by('data_validade', 'data_entrada')
 
                 for lote in lotes:
                     if qtd_necessaria <= 0:
@@ -414,6 +412,15 @@ def separar_pedido(request, pedido_id):
                     qtd_retirar = min(lote.quantidade_atual, qtd_necessaria)
                     lote.quantidade_atual -= qtd_retirar
                     lote.save()
+
+                    # Registra a saída no estoque para rastreabilidade
+                    SaidaEstoque.objects.create(
+                        lote=lote,
+                        loja_destino=pedido.loja_solicitante,
+                        quantidade=qtd_retirar,
+                        responsavel=request.user if request.user.is_authenticated else None
+                    )
+
                     qtd_necessaria -= qtd_retirar
 
             pedido.status = 'CONCLUIDO'
@@ -436,74 +443,16 @@ def pedido_detalhe(request, pedido_id):
     return render(request, 'estoque/pedido_detalhe.html', context)
 
 
-@transaction.atomic
-def concluir_pedido(pedido):
-    """
-    Consome o estoque físico dos lotes ativos usando a regra PEPS/FIFO:
-    Prioriza lotes com data de validade mais próxima e quantidade_atual > 0.
-    """
-    if pedido.status == 'CONCLUIDO':
-        return
-
-    for item in pedido.itens.all():
-        quantidade_necessaria = item.quantidade
-
-        # Busca os lotes ativos da fruta ordenados pela validade (mais antigo primeiro)
-        lotes_disponiveis = LoteEntrada.objects.filter(
-            fruta=item.fruta,
-            quantidade_atual__gt=0
-        ).order_by('data_validade', 'data_entrada')
-
-        for lote in lotes_disponiveis:
-            if quantidade_necessaria <= 0:
-                break
-
-            if lote.quantidade_atual >= quantidade_necessaria:
-                # O lote cobre todo o restante da demanda
-                lote.quantidade_atual -= quantidade_necessaria
-
-                # Registra a saída real para rastreabilidade
-                SaidaEstoque.objects.create(
-                    lote=lote,
-                    loja_destino=pedido.loja, # se houver relação com Loja
-                    quantidade=quantidade_necessaria,
-                    responsavel=pedido.usuario
-                )
-
-                lote.save()
-                quantidade_necessaria = Decimal('0.00')
-            else:
-                # O lote cobre apenas parte da demanda (baixa parcial)
-                quantidade_baixada = lote.quantidade_atual
-                quantidade_necessaria -= quantidade_baixada
-                lote.quantidade_atual = Decimal('0.00')
-
-                SaidaEstoque.objects.create(
-                    lote=lote,
-                    loja_destino=pedido.loja,
-                    quantidade=quantidade_baixada,
-                    responsavel=pedido.usuario
-                )
-
-                lote.save()
-
-    # Atualiza o status do pedido para CONCLUIDO
-    pedido.status = 'CONCLUIDO'
-    pedido.save()
-
-
 @login_required
 def pedidos_historico(request):
     pedidos = Pedido.objects.prefetch_related('itens__fruta').select_related('loja_solicitante', 'usuario').all()
 
-    # Filtros
     data_inicio = request.GET.get('data_inicio')
     data_fim = request.GET.get('data_fim')
     status_filtro = request.GET.get('status')
     loja_id = request.GET.get('loja')
     canal_filtro = request.GET.get('canal')
 
-    # Filtro padrão: Pedidos de HOJE caso não seja informada nenhuma data
     if not data_inicio and not data_fim and request.GET.get('filtrar') != 'todos':
         hoje = timezone.now().date()
         pedidos = pedidos.filter(data_criacao__date=hoje)
@@ -524,7 +473,6 @@ def pedidos_historico(request):
     if canal_filtro:
         pedidos = pedidos.filter(canal_venda=canal_filtro)
 
-    # Métricas do período filtrado
     total_faturado = pedidos.filter(status='CONCLUIDO').aggregate(total=Sum('valor_total'))['total'] or 0
     total_pedidos = pedidos.count()
     pedidos_concluidos = pedidos.filter(status='CONCLUIDO').count()
@@ -546,3 +494,96 @@ def pedidos_historico(request):
         'canal_filtro': canal_filtro,
     }
     return render(request, 'estoque/pedidos_historico.html', context)
+
+
+@login_required
+def registrar_compra_ceasa(request):
+    if request.method == 'POST':
+        form = CompraCeasaForm(request.POST)
+        if form.is_valid():
+            compra = form.save(commit=False)
+
+            nome_novo = form.cleaned_data.get('nome_nova_fruta')
+
+            if nome_novo:
+                nova_fruta, created = Fruta.objects.get_or_create(
+                    nome=nome_novo,
+                    defaults={
+                        'dias_validade_padrao': 7,
+                        'armazem_recomendado': 'DEPOSITO'
+                    }
+                )
+                compra.fruta = nova_fruta
+
+            if not compra.fruta:
+                form.add_error('fruta', 'Selecione uma fruta existente ou digite o nome de uma nova variedade.')
+                return render(request, 'estoque/registrar_compra.html', {'form': form})
+
+            compra.responsavel_compra = request.user
+            compra.status = 'PENDENTE'
+            compra.save()
+            form.save_m2m()
+
+            return redirect('registrar_compra_ceasa')
+    else:
+        form = CompraCeasaForm()
+
+    return render(request, 'estoque/registrar_compra.html', {'form': form})
+
+
+@login_required
+def listar_compras_conferencia(request):
+    compras_pendentes = CompraCeasa.objects.filter(status='PENDENTE').order_by('-data_compra')
+    return render(request, 'estoque/conferencia_compras.html', {'compras_pendentes': compras_pendentes})
+
+
+@login_required
+def realizar_conferencia_compra(request, pk):
+    compra = get_object_or_404(CompraCeasa, pk=pk)
+
+    if request.method == 'POST':
+        quantidade_conferida = request.POST.get('quantidade_conferida')
+        observacao = request.POST.get('observacao', '')
+
+        if quantidade_conferida:
+            compra.quantidade_comprada = float(quantidade_conferida)
+            compra.status = 'CONFERIDO'
+            compra.save()
+
+            return redirect('listar_compras_conferencia')
+
+    return render(request, 'estoque/detalhe_conferencia.html', {'compra': compra})
+
+@login_required
+def realizar_conferencia_compra(request, pk):
+    compra = get_object_or_404(CompraCeasa, pk=pk)
+
+    if request.method == 'POST':
+        quantidade_conferida = request.POST.get('quantidade_conferida')
+        observacao = request.POST.get('observacao', '')
+
+        if quantidade_conferida:
+            with transaction.atomic():
+                # Atualiza os dados da compra CEASA
+                compra.quantidade_comprada = Decimal(quantidade_conferida)
+                compra.status = 'CONFERIDO'
+                compra.save()
+
+                # CRIAÇÃO AUTOMÁTICA DO LOTE DE ENTRADA (sem o campo preco_custo)
+                dias_validade = getattr(compra.fruta, 'dias_validade_padrao', 7) or 7
+                data_val = timezone.now().date() + timedelta(days=dias_validade)
+                armazem = getattr(compra.fruta, 'armazem_recomendado', 'DEPOSITO') or 'DEPOSITO'
+
+                LoteEntrada.objects.create(
+                    fruta=compra.fruta,
+                    quantidade_inicial=compra.quantidade_comprada,
+                    quantidade_atual=compra.quantidade_comprada,
+                    data_validade=data_val,
+                    local_armazenado=armazem,
+                    codigo_lote=f"CEASA-{compra.id}-{timezone.now().strftime('%d%m%Y')}"
+                )
+
+            messages.success(request, f"Compra #{compra.id} conferida e Lote gerado no estoque com sucesso!")
+            return redirect('listar_compras_conferencia')
+
+    return render(request, 'estoque/detalhe_conferencia.html', {'compra': compra})
