@@ -471,10 +471,16 @@ def separar_pedido(request, pedido_id):
             pedido.status = 'CONCLUIDO'
             pedido.save()
 
+            # --- MARCA A NOTIFICAÇÃO DESTE PEDIDO COMO LIDA ---
+            Notificacao.objects.filter(
+                link__icontains=f"pedido/{pedido.id}/",
+                lida=False
+            ).update(lida=True)
+            # ------------------------------------------------
+
         messages.success(request, f"Pedido #{pedido.codigo_pedido} separado e concluído com sucesso!")
 
     return redirect('dashboard')
-
 
 @login_required
 def pedido_detalhe(request, pedido_id):
