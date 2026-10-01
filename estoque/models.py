@@ -287,3 +287,12 @@ class CompraCeasa(models.Model):
 
     def __str__(self):
         return f"Compra CEASA: {self.quantidade_comprada}x - Status: {self.get_status_display()}"
+
+class Notificacao(models.Model):
+    mensagem = models.CharField(max_length=255)
+    link = models.CharField(max_length=255, blank=True, null=True, help_text="Link opcional ao clicar na notificação")
+    lida = models.BooleanField(default=False)
+    data_criacao = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.mensagem

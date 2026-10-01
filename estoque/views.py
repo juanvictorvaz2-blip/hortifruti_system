@@ -1,6 +1,8 @@
 import urllib.parse
 from datetime import date, timedelta
 from decimal import Decimal
+from .models import Notificacao
+from django.urls import reverse
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -418,13 +420,19 @@ def finalizar_pedido(request):
                 preco_unitario=Decimal('0.00')
             )
 
+        # --- GERAÇÃO DA NOTIFICAÇÃO PARA O SININHO ---
+        link_pedido = reverse('pedido_detalhe', args=[pedido.id])
+
+        Notificacao.objects.create(
+            mensagem=f"Novo pedido #{pedido.codigo_pedido} da Loja {loja.nome} por {nome_solicitante}.",
+            link=link_pedido
+        )
+        # ---------------------------------------------
+
         request.session['carrinho'] = {}
         messages.success(request, f"Pedido #{pedido.codigo_pedido} enviado com sucesso ao depósito!")
 
-        return redirect('pedidos_historico')
-
     return redirect('catalogo_loja')
-
 
 @login_required
 def separar_pedido(request, pedido_id):
