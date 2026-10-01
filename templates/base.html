@@ -313,6 +313,9 @@
                                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger text-white" style="font-size: 0.65rem; padding: 2px 5px;">
                                     {{ quantidade_notificacoes }}
                                 </span>
+                                <a href="{% url 'marcar_todas_lidas' %}" class="text-muted small" style="font-size: 0.75rem; text-decoration: underline;" title="Marcar todas como lidas">
+                Limpar tudo
+            </a>
                             {% endif %}
                         </a>
                         <div class="dropdown-menu dropdown-menu-right shadow border-0 mt-2" aria-labelledby="navbarDropdownNotif" style="width: 300px;">

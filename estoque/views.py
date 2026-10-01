@@ -645,3 +645,8 @@ def realizar_conferencia_compra(request, pk):
             return redirect('listar_compras_conferencia')
 
     return render(request, 'estoque/detalhe_conferencia.html', {'compra': compra})
+
+@login_required
+def marcar_todas_notificacoes_lidas(request):
+    Notificacao.objects.filter(lida=False).update(lida=True)
+    return redirect(request.META.get('HTTP_REFERER', 'dashboard'))

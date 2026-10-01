@@ -37,4 +37,6 @@ urlpatterns = [
     path('compras/lista/', views.registrar_compra_ceasa, name='lista_compras_ceasa'),
     path('compras/conferencia/', views.listar_compras_conferencia, name='listar_compras_conferencia'),
     path('compras/conferencia/<int:pk>/', views.realizar_conferencia_compra, name='realizar_conferencia_compra'),
+
+    path('notificacoes/limpar/', views.marcar_todas_notificacoes_lidas, name='marcar_todas_lidas'),
 ]
