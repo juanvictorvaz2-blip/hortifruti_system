@@ -307,21 +307,32 @@
                 <!-- Dropdown do Sininho de Notificações -->
                 <ul class="navbar-nav">
                     <li class="nav-item dropdown">
+                        <!-- Botão Principal do Sino -->
                         <a class="nav-link dropdown-toggle text-dark position-relative p-0" href="#" id="navbarDropdownNotif" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             <i class="bi bi-bell-fill" style="font-size: 1.2rem;"></i>
                             {% if quantidade_notificacoes > 0 %}
                                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger text-white" style="font-size: 0.65rem; padding: 2px 5px;">
                                     {{ quantidade_notificacoes }}
                                 </span>
-                                <a href="{% url 'marcar_todas_lidas' %}" class="text-muted small" style="font-size: 0.75rem; text-decoration: underline;" title="Marcar todas como lidas">
-                Limpar tudo
-            </a>
                             {% endif %}
                         </a>
-                        <div class="dropdown-menu dropdown-menu-right shadow border-0 mt-2" aria-labelledby="navbarDropdownNotif" style="width: 300px;">
-                            <h6 class="dropdown-header font-weight-bold text-success">Notificações</h6>
-                            <div class="dropdown-divider"></div>
 
+                        <!-- Caixa Dropdown do Sininho -->
+                        <div class="dropdown-menu dropdown-menu-right shadow border-0 mt-2" aria-labelledby="navbarDropdownNotif" style="width: 300px;">
+
+                            <!-- Cabeçalho com o título e o botão Limpar tudo -->
+                            <div class="d-flex justify-content-between align-items-center px-3 py-1">
+                                <h6 class="dropdown-header font-weight-bold text-success p-0 m-0">Notificações</h6>
+                                {% if quantidade_notificacoes > 0 %}
+                                    <a href="{% url 'marcar_todas_lidas' %}" class="text-muted small" style="font-size: 0.75rem; text-decoration: underline;" title="Marcar todas como lidas">
+                                        Limpar tudo
+                                    </a>
+                                {% endif %}
+                            </div>
+
+                            <div class="dropdown-divider mt-2 mb-0"></div>
+
+                            <!-- Lista de Notificações -->
                             {% for notif in notificacoes_nao_lidas %}
                                 <a class="dropdown-item small text-wrap py-2 border-bottom" href="{{ notif.link|default:'#' }}">
                                     <i class="bi bi-info-circle text-primary mr-1"></i> {{ notif.mensagem }}

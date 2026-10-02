@@ -22,112 +22,140 @@
     {% endif %}
 
     <div class="row">
-        <!-- Coluna Esquerda: Catálogo Separado por Categorias -->
+        <!-- Coluna Esquerda: Catálogo em Sanfona Separado por Categorias -->
         <div class="col-lg-7 mb-4">
 
-            <!-- Bloco de Frutas -->
-            {% if frutas %}
-            <div class="card shadow-sm mb-3">
-                <div class="card-header bg-warning text-dark font-weight-bold">
-                    <h5 class="card-title mb-0">🍎 Frutas Disponíveis</h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="list-group list-group-flush">
-                        {% for produto in frutas %}
-                            <div class="d-flex justify-content-between align-items-center mb-3 p-3 border-bottom">
-                                <div>
-                                    <h6 class="mb-0 font-weight-bold">{{ produto.nome }}</h6>
-                                    <small class="text-muted">Saldo disponível: <strong>{{ produto.total_estoque }}</strong></small>
-                                </div>
-                                <form action="{% url 'adicionar_ao_carrinho' produto.id %}" method="POST" class="d-flex align-items-center">
-                                    {% csrf_token %}
-                                    <input type="number" name="quantidade" value="1" min="1" max="{{ produto.total_estoque }}" class="form-control form-control-sm me-2" style="width: 70px;">
-                                    <button type="submit" class="btn btn-sm btn-outline-success">Adicionar</button>
-                                </form>
-                            </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-            {% endif %}
+            <div class="accordion" id="accordionCatalogo">
 
-            <!-- Bloco de Legumes -->
-            {% if legumes %}
-            <div class="card shadow-sm mb-3">
-                <div class="card-header bg-success text-white">
-                    <h5 class="card-title mb-0">🥕 Legumes Disponíveis</h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="list-group list-group-flush">
-                        {% for produto in legumes %}
-                            <div class="d-flex justify-content-between align-items-center mb-3 p-3 border-bottom">
-                                <div>
-                                    <h6 class="mb-0 font-weight-bold">{{ produto.nome }}</h6>
-                                    <small class="text-muted">Saldo disponível: <strong>{{ produto.total_estoque }}</strong></small>
-                                </div>
-                                <form action="{% url 'adicionar_ao_carrinho' produto.id %}" method="POST" class="d-flex align-items-center">
-                                    {% csrf_token %}
-                                    <input type="number" name="quantidade" value="1" min="1" max="{{ produto.total_estoque }}" class="form-control form-control-sm me-2" style="width: 70px;">
-                                    <button type="submit" class="btn btn-sm btn-outline-success">Adicionar</button>
-                                </form>
-                            </div>
-                        {% endfor %}
+                <!-- Bloco de Frutas -->
+                {% if frutas %}
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-warning text-dark font-weight-bold p-0" id="headingFrutas">
+                        <button class="btn btn-link btn-block text-left text-dark font-weight-bold d-flex justify-content-between align-items-center p-3 text-decoration-none" type="button" data-toggle="collapse" data-target="#collapseFrutas" aria-expanded="false" aria-controls="collapseFrutas">
+                            <span>🍎 Frutas Disponíveis</span>
+                            <i class="bi bi-chevron-down"></i>
+                        </button>
                     </div>
-                </div>
-            </div>
-            {% endif %}
 
-            <!-- Bloco de Verduras -->
-            {% if verduras %}
-            <div class="card shadow-sm mb-3">
-                <div class="card-header text-white" style="background-color: #20c997;">
-                    <h5 class="card-title mb-0">🥬 Verduras Disponíveis</h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="list-group list-group-flush">
-                        {% for produto in verduras %}
-                            <div class="d-flex justify-content-between align-items-center mb-3 p-3 border-bottom">
-                                <div>
-                                    <h6 class="mb-0 font-weight-bold">{{ produto.nome }}</h6>
-                                    <small class="text-muted">Saldo disponível: <strong>{{ produto.total_estoque }}</strong></small>
-                                </div>
-                                <form action="{% url 'adicionar_ao_carrinho' produto.id %}" method="POST" class="d-flex align-items-center">
-                                    {% csrf_token %}
-                                    <input type="number" name="quantidade" value="1" min="1" max="{{ produto.total_estoque }}" class="form-control form-control-sm me-2" style="width: 70px;">
-                                    <button type="submit" class="btn btn-sm btn-outline-success">Adicionar</button>
-                                </form>
+                    <div id="collapseFrutas" class="collapse" aria-labelledby="headingFrutas" data-parent="#accordionCatalogo">
+                        <div class="card-body p-0">
+                            <div class="list-group list-group-flush">
+                                {% for produto in frutas %}
+                                    <div class="d-flex justify-content-between align-items-center mb-3 p-3 border-bottom">
+                                        <div>
+                                            <h6 class="mb-0 font-weight-bold">{{ produto.nome }}</h6>
+                                            <small class="text-muted">Saldo disponível: <strong>{{ produto.total_estoque }}</strong></small>
+                                        </div>
+                                        <form action="{% url 'adicionar_ao_carrinho' produto.id %}" method="POST" class="d-flex align-items-center">
+                                            {% csrf_token %}
+                                            <input type="number" name="quantidade" value="1" min="1" max="{{ produto.total_estoque }}" class="form-control form-control-sm me-2" style="width: 70px;">
+                                            <button type="submit" class="btn btn-sm btn-outline-success ml-2">Adicionar</button>
+                                        </form>
+                                    </div>
+                                {% endfor %}
                             </div>
-                        {% endfor %}
+                        </div>
                     </div>
                 </div>
-            </div>
-            {% endif %}
+                {% endif %}
 
-            <!-- Bloco de Outros / Insumos -->
-            {% if outros %}
-            <div class="card shadow-sm mb-3">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="card-title mb-0">📦 Outros / Insumos Disponíveis</h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="list-group list-group-flush">
-                        {% for produto in outros %}
-                            <div class="d-flex justify-content-between align-items-center mb-3 p-3 border-bottom">
-                                <div>
-                                    <h6 class="mb-0 font-weight-bold">{{ produto.nome }}</h6>
-                                    <small class="text-muted">Saldo disponível: <strong>{{ produto.total_estoque }}</strong></small>
-                                </div>
-                                <form action="{% url 'adicionar_ao_carrinho' produto.id %}" method="POST" class="d-flex align-items-center">
-                                    {% csrf_token %}
-                                    <input type="number" name="quantidade" value="1" min="1" max="{{ produto.total_estoque }}" class="form-control form-control-sm me-2" style="width: 70px;">
-                                    <button type="submit" class="btn btn-sm btn-outline-success">Adicionar</button>
-                                </form>
+                <!-- Bloco de Legumes -->
+                {% if legumes %}
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-success text-white font-weight-bold p-0" id="headingLegumes">
+                        <button class="btn btn-link btn-block text-left text-white font-weight-bold d-flex justify-content-between align-items-center p-3 text-decoration-none" type="button" data-toggle="collapse" data-target="#collapseLegumes" aria-expanded="false" aria-controls="collapseLegumes">
+                            <span>🥕 Legumes Disponíveis</span>
+                            <i class="bi bi-chevron-down"></i>
+                        </button>
+                    </div>
+
+                    <div id="collapseLegumes" class="collapse" aria-labelledby="headingLegumes" data-parent="#accordionCatalogo">
+                        <div class="card-body p-0">
+                            <div class="list-group list-group-flush">
+                                {% for produto in legumes %}
+                                    <div class="d-flex justify-content-between align-items-center mb-3 p-3 border-bottom">
+                                        <div>
+                                            <h6 class="mb-0 font-weight-bold">{{ produto.nome }}</h6>
+                                            <small class="text-muted">Saldo disponível: <strong>{{ produto.total_estoque }}</strong></small>
+                                        </div>
+                                        <form action="{% url 'adicionar_ao_carrinho' produto.id %}" method="POST" class="d-flex align-items-center">
+                                            {% csrf_token %}
+                                            <input type="number" name="quantidade" value="1" min="1" max="{{ produto.total_estoque }}" class="form-control form-control-sm me-2" style="width: 70px;">
+                                            <button type="submit" class="btn btn-sm btn-outline-success ml-2">Adicionar</button>
+                                        </form>
+                                    </div>
+                                {% endfor %}
                             </div>
-                        {% endfor %}
+                        </div>
                     </div>
                 </div>
+                {% endif %}
+
+                <!-- Bloco de Verduras -->
+                {% if verduras %}
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header text-white font-weight-bold p-0" style="background-color: #20c997;" id="headingVerduras">
+                        <button class="btn btn-link btn-block text-left text-white font-weight-bold d-flex justify-content-between align-items-center p-3 text-decoration-none" type="button" data-toggle="collapse" data-target="#collapseVerduras" aria-expanded="false" aria-controls="collapseVerduras">
+                            <span>🥬 Verduras Disponíveis</span>
+                            <i class="bi bi-chevron-down"></i>
+                        </button>
+                    </div>
+
+                    <div id="collapseVerduras" class="collapse" aria-labelledby="headingVerduras" data-parent="#accordionCatalogo">
+                        <div class="card-body p-0">
+                            <div class="list-group list-group-flush">
+                                {% for produto in verduras %}
+                                    <div class="d-flex justify-content-between align-items-center mb-3 p-3 border-bottom">
+                                        <div>
+                                            <h6 class="mb-0 font-weight-bold">{{ produto.nome }}</h6>
+                                            <small class="text-muted">Saldo disponível: <strong>{{ produto.total_estoque }}</strong></small>
+                                        </div>
+                                        <form action="{% url 'adicionar_ao_carrinho' produto.id %}" method="POST" class="d-flex align-items-center">
+                                            {% csrf_token %}
+                                            <input type="number" name="quantidade" value="1" min="1" max="{{ produto.total_estoque }}" class="form-control form-control-sm me-2" style="width: 70px;">
+                                            <button type="submit" class="btn btn-sm btn-outline-success ml-2">Adicionar</button>
+                                        </form>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Bloco de Outros / Insumos -->
+                {% if outros %}
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-secondary text-white font-weight-bold p-0" id="headingOutros">
+                        <button class="btn btn-link btn-block text-left text-white font-weight-bold d-flex justify-content-between align-items-center p-3 text-decoration-none" type="button" data-toggle="collapse" data-target="#collapseOutros" aria-expanded="false" aria-controls="collapseOutros">
+                            <span>📦 Outros / Insumos Disponíveis</span>
+                            <i class="bi bi-chevron-down"></i>
+                        </button>
+                    </div>
+
+                    <div id="collapseOutros" class="collapse" aria-labelledby="headingOutros" data-parent="#accordionCatalogo">
+                        <div class="card-body p-0">
+                            <div class="list-group list-group-flush">
+                                {% for produto in outros %}
+                                    <div class="d-flex justify-content-between align-items-center mb-3 p-3 border-bottom">
+                                        <div>
+                                            <h6 class="mb-0 font-weight-bold">{{ produto.nome }}</h6>
+                                            <small class="text-muted">Saldo disponível: <strong>{{ produto.total_estoque }}</strong></small>
+                                        </div>
+                                        <form action="{% url 'adicionar_ao_carrinho' produto.id %}" method="POST" class="d-flex align-items-center">
+                                            {% csrf_token %}
+                                            <input type="number" name="quantidade" value="1" min="1" max="{{ produto.total_estoque }}" class="form-control form-control-sm me-2" style="width: 70px;">
+                                            <button type="submit" class="btn btn-sm btn-outline-success ml-2">Adicionar</button>
+                                        </form>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
             </div>
-            {% endif %}
 
             {% if not frutas and not legumes and not verduras and not outros %}
                 <div class="alert alert-warning text-center">Nenhum produto com saldo disponível no depósito no momento.</div>
@@ -135,7 +163,7 @@
 
         </div>
 
-        <!-- Coluna Direita: Carrinho & Finalização do Pedido (Inalterada e funcional) -->
+        <!-- Coluna Direita: Carrinho & Finalização do Pedido -->
         <div class="col-lg-5">
             <div class="card shadow-sm border-primary">
                 <div class="card-header bg-primary text-white">
@@ -164,13 +192,13 @@
                         <form action="{% url 'finalizar_pedido' %}" method="POST">
                             {% csrf_token %}
                             <div class="mb-3">
-                                <label for="nome_solicitante" class="form-label">Seu Nome:</label>
+                                <label for="nome_solicitante" class="form-label font-weight-bold">Seu Nome:</label>
                                 <input type="text" name="nome_solicitante" id="nome_solicitante" class="form-control" placeholder="Ex: Joao Silva" required>
                             </div>
 
                             <div class="mb-3">
-                                <label for="loja" class="form-label">Selecione a Loja Destino:</label>
-                                <select name="loja" id="loja" class="form-select" required>
+                                <label for="loja" class="form-label font-weight-bold">Seu Local de Trabalho (Loja):</label>
+                                <select name="loja" id="loja" class="form-control" required>
                                     <option value="" selected disabled>-- Escolha a loja --</option>
                                     {% for loja in lojas %}
                                         <option value="{{ loja.id }}">{{ loja.nome }}</option>
@@ -179,7 +207,7 @@
                             </div>
 
                             <div class="d-grid">
-                                <button type="submit" class="btn btn-success btn-lg">
+                                <button type="submit" class="btn btn-success btn-lg btn-block">
                                     <i class="bi bi-check-circle"></i> Enviar Pedido ao Deposito
                                 </button>
                             </div>
@@ -187,9 +215,9 @@
 
                     {% else %}
                         <div class="text-center py-4 text-muted">
-                            <i class="bi bi-cart-x fs-1"></i>
+                            <i class="bi bi-cart-x fs-1" style="font-size: 2.5rem;"></i>
                             <p class="mt-2 mb-0">Nenhum item no carrinho ainda.</p>
-                            <small>Escolha os produtos na lista ao lado.</small>
+                            <small>Escolha os produtos abrindo as categorias ao lado.</small>
                         </div>
                     {% endif %}
                 </div>
@@ -197,4 +225,62 @@
         </div>
     </div>
 </div>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // 1. Ao carregar a página: restaura a posição do scroll e reabre as caixas que estavam abertas
+        const scrollY = localStorage.getItem("scrollY");
+        if (scrollY !== null) {
+            window.scrollTo(0, parseInt(scrollY));
+            localStorage.removeItem("scrollY");
+        }
+
+        const caixasAbertas = JSON.parse(localStorage.getItem("caixasAbertas") || "[]");
+        caixasAbertas.forEach(id => {
+            const elemento = document.querySelector(id);
+            if (elemento) {
+                // Adiciona a classe 'show' do Bootstrap para abrir a caixa
+                elemento.classList.add("show");
+                // Atualiza o atributo aria-expanded no botão correspondente
+                const botao = document.querySelector(`[data-target="${id}"], [data-bs-target="${id}"]`);
+                if (botao) {
+                    botao.setAttribute("aria-expanded", "true");
+                }
+            }
+        });
+        localStorage.removeItem("caixasAbertas");
+
+        // 2. Salva a posição do scroll antes de sair/recarregar
+        window.addEventListener("scroll", function() {
+            localStorage.setItem("scrollY", window.scrollY);
+        });
+
+        // 3. Monitora quando o usuário abre ou fecha uma caixa (collapse)
+        const collapses = document.querySelectorAll('.collapse');
+        collapses.forEach(collapse => {
+            collapse.addEventListener('shown.bs.collapse', function () {
+                salvarCaixasAbertas();
+            });
+            collapse.addEventListener('hidden.bs.collapse', function () {
+                salvarCaixasAbertas();
+            });
+        });
+
+        function salvarCaixasAbertas() {
+            const abertas = [];
+            document.querySelectorAll('.collapse.show').forEach(el => {
+                if (el.id) {
+                    abertas.push('#' + el.id);
+                }
+            });
+            localStorage.setItem("caixasAbertas", JSON.stringify(abertas));
+        }
+
+        // 4. Salva as caixas abertas também quando clicar em qualquer botão de enviar formulário (adicionar)
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function() {
+                salvarCaixasAbertas();
+            });
+        });
+    });
+</script>
 {% endblock %}
