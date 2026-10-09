@@ -37,15 +37,28 @@ class Fruta(models.Model):
         default='FRUTA',
         verbose_name="Categoria do Produto"
     )
+
+    # NOVOS CAMPOS DE PREÇO OFICIAIS NA FRUTA
+    preco_banca = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0.00, verbose_name="Preço Banca (Kg/Un)"
+    )
+    preco_atacado = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0.00, verbose_name="Preço Atacado (Caixa)"
+    )
+
     dias_validade_padrao = models.PositiveIntegerField(
         help_text='Validade média em dias após a colheita/recebimento'
     )
     armazem_recomendado = models.CharField(
         max_length=20, choices=TIPO_ARMAZEM_CHOICES, default='DEPOSITO'
     )
+    foto = models.URLField(
+        max_length=500, blank=True, null=True, help_text="Cole o link direto do Postimages aqui."
+    )
 
     def __str__(self):
         return f"{self.nome} ({self.get_categoria_display()})"
+
     @property
     def estoque_fisico(self):
         total = LoteEntrada.objects.filter(fruta=self).aggregate(
@@ -67,7 +80,6 @@ class Fruta(models.Model):
     def estoque_disponivel(self):
         disponivel = self.estoque_fisico - self.estoque_reservado
         return max(disponivel, Decimal('0.00'))
-
 
 class LoteEntrada(models.Model):
     codigo_lote = models.CharField(max_length=50, unique=True, blank=True)
@@ -296,3 +308,80 @@ class Notificacao(models.Model):
 
     def __str__(self):
         return self.mensagem
+
+
+class CategoriaProduto(models.Model):
+    nome = models.CharField(max_length=100) # Ex: Frutas, Legumes, Verduras, Insumos
+
+    def __str__(self):
+        return self.nome
+
+class ProdutoCliente(models.Model):
+    """
+    Produto voltado para a vitrine do cliente, com suporte a fotos,
+    preço de atacado (caixa) e preço de banca (kg).
+    """
+    CATEGORIA_CHOICES = [
+        ('FRUTA', 'Fruta'),
+        ('LEGUME', 'Legume'),
+        ('VERDURA', 'Verdura'),
+        ('OUTRO', 'Outro'),
+    ]
+
+    nome = models.CharField(max_length=150)
+    categoria = models.CharField(max_length=20, choices=CATEGORIA_CHOICES, default='FRUTA')
+    descricao = models.TextField(blank=True, null=True, help_text="Descrição estilo rede social, dicas ou curiosidades da fruta.")
+    foto = models.URLField(max_length=500, blank=True, null=True, help_text="Foto de alta qualidade para o feed.")
+
+    # Preços e Unidades
+    preco_atacado = models.DecimalField(max_digits=10, decimal_places=2, help_text="Preço para caixa fechada (Atacado)")
+    descricao_atacado = models.CharField(max_length=100, default="Caixa Fechada", help_text="Ex: Caixa com 20kg")
+
+    preco_banca = models.DecimalField(max_digits=10, decimal_places=2, help_text="Preço por quilo ou unidade (Banca)")
+    descricao_banca = models.CharField(max_length=100, default="Preço por Kg", help_text="Ex: Por Quilograma")
+
+    # Vinculação opcional com o estoque interno se quiser puxar o saldo automático
+    # produto_estoque_interno = models.ForeignKey(ProdutoInterno, on_delete=models.SET_NULL, null=True, blank=True)
+
+    ativo = models.BooleanField(default=True, help_text="Se desmarcado, some da vitrine do cliente.")
+    destaque_novidade = models.BooleanField(default=False, help_text="Aparece na seção de Novidades / Frutas de Época.")
+
+    def __str__(self):
+        return f"{self.nome} (Atacado: R$ {self.preco_atacado} | Banca: R$ {self.preco_banca})"
+
+
+class PostFeedFrutas(models.Model):
+    """
+    O 'Feed' estilo Instagram/Facebook para postar novidades, dicas,
+    frutas de época e banners interativos para os clientes.
+    """
+    titulo = models.CharField(max_length=200)
+    conteudo = models.TextField(help_text="Texto da postagem, novidade ou dica sobre a fruta.")
+    imagem = models.URLField(max_length=500, blank=True, null=True)
+    produto_relacionado = models.ForeignKey(ProdutoCliente, on_delete=models.SET_NULL, null=True, blank=True, help_text="Produto em destaque na postagem (opcional)")
+    data_postagem = models.DateTimeField(auto_now_add=True)
+    ativo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.titulo
+
+
+class ItemCarrinhoCliente(models.Model):
+    """
+    Carrinho temporário do cliente antes de gerar o ID e enviar para o WhatsApp.
+    Usa a session_key do navegador para identificar o carrinho de cada visitante anônimo.
+    """
+    session_key = models.CharField(max_length=255, db_index=True)
+    produto = models.ForeignKey(ProdutoCliente, on_delete=models.CASCADE)
+    tipo_venda = models.CharField(max_length=20, choices=[('ATACADO', 'Atacado (Caixa)'), ('BANCA', 'Banca (Kg)')], default='BANCA')
+    quantidade = models.DecimalField(max_digits=10, decimal_places=2, default=1)
+    adicionado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.quantidade}x {self.produto.nome} ({self.tipo_venda})"
+
+    @property
+    def subtotal(self):
+        if self.tipo_venda == 'ATACADO':
+            return self.quantidade * self.produto.preco_atacado
+        return self.quantidade * self.produto.preco_banca

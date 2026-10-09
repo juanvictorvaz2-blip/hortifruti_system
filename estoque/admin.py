@@ -1,10 +1,12 @@
 from django.contrib import admin
-from .models import Fruta, Loja, LoteEntrada, SaidaEstoque
+from .models import Fruta, LoteEntrada, CompraCeasa, Loja, SaidaEstoque, Pedido
 
 @admin.register(Fruta)
 class FrutaAdmin(admin.ModelAdmin):
-    list_display = ('nome', 'dias_validade_padrao', 'armazem_recomendado')
-    search_fields = ('nome',)
+    list_display = ('nome', 'categoria', 'preco_banca', 'preco_atacado', 'foto', 'dias_validade_padrao')
+    list_editable = ('preco_banca', 'preco_atacado', 'foto', 'dias_validade_padrao')
+    search_fields = ('nome', 'categoria')
+    list_filter = ('categoria',)
 
 @admin.register(Loja)
 class LojaAdmin(admin.ModelAdmin):
