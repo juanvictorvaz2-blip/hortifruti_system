@@ -11,6 +11,49 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
     <style>
+
+    /* Regras aplicadas automaticamente apenas em celulares (telas menores que 768px) */
+@media (max-width: 768px) {
+    body {
+        padding: 5px !important;
+        font-size: 14px;
+    }
+
+    /* Reduz drasticamente os espaços em branco (margins e paddings) */
+    .container, .container-fluid {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+
+    /* Deixa os cards e blocos um embaixo do outro com espaçamento enxuto */
+    .card {
+        margin-bottom: 10px !important;
+        box-shadow: none !important; /* Visual mais leve no mobile */
+    }
+
+    /* Reduz tamanhos de títulos grandes que estouram a tela do celular */
+    h1 {
+        font-size: 1.5rem !important;
+    }
+
+    h5 {
+        font-size: 1.1rem !important;
+    }
+
+    /* Empilha tabelas ou botões de ação lado a lado */
+    .d-flex {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+
+    /* Dá um respiro nos botões para facilitar o toque com o dedo */
+    .btn {
+        width: 100% !important;
+        margin-bottom: 5px !important;
+        padding: 10px !important;
+    }
+}
+
         * {
             margin: 0;
             padding: 0;
@@ -252,7 +295,7 @@
             </a>
             <a href="{% url 'registrar_compra_ceasa' %}" class="nav-item-link">
                 <i class="bi bi-cart-check"></i>
-                <span>Compras (CEASA)</span>
+                <span>Compras</span>
             </a>
             <a href="{% url 'listar_compras_conferencia' %}" class="nav-item-link">
                 <i class="bi bi-clipboard-check"></i>

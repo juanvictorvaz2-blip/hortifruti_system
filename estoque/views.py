@@ -1,12 +1,11 @@
 import urllib.parse
 from datetime import date, timedelta
 from decimal import Decimal
-from .models import Notificacao
 from django.urls import reverse
-
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models.deletion import ProtectedError  # Ajustado para importação correta
+from django.contrib.admin.views.decorators import staff_member_required
+from django.db.models.deletion import ProtectedError
 from django.db import transaction
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
@@ -20,41 +19,57 @@ from .forms import (
     SaidaEstoqueForm,
 )
 
+from estoque.models import PostFeedFrutas, Fruta, ItemCarrinhoCliente
 # Importação de Models
 from .models import (
     CompraCeasa,
-    Fruta,
     ItemPedido,
     Loja,
     LoteEntrada,
     MovimentacaoEstoque,
     Pedido,
     SaidaEstoque,
+    Notificacao,
+    ProdutoCliente,
+
 )
 
 
-@login_required
+# ==========================================
+# ÁREA INTERNA (PROTEGIDA POR STAFF / LOGIN)
+# ==========================================
+
+@staff_member_required(login_url='vitrine_cliente')
 def dashboard(request):
     hoje = timezone.now().date()
     limite_alerta = hoje + timedelta(days=5)
 
-    # Indicadores gerais
+    # 1. Captura o que foi digitado na barra de pesquisa (ex: ?q=gala)
+    query = request.GET.get('q', '')
+
     total_frutas = Fruta.objects.count()
     total_lojas = Loja.objects.count()
 
-    # Controle de Lotes
+    # 2. Filtragem de frutas com base na busca
+    frutas_query = Fruta.objects.all()
+    if query:
+        frutas_query = frutas_query.filter(nome__icontains=query)
+
     lotes_ativos = LoteEntrada.objects.filter(quantidade_atual__gt=0)
+
+    # 3. Se houver pesquisa, filtra também os lotes para exibir os daquela fruta específica
+    if query:
+        lotes_ativos = lotes_ativos.filter(fruta__nome__icontains=query)
+
     lotes_criticos = lotes_ativos.filter(
         data_validade__gte=hoje, data_validade__lte=limite_alerta
     ).order_by('data_validade')
     lotes_vencidos = lotes_ativos.filter(data_validade__lt=hoje)
 
-    # Histórico de saídas recentes
     ultimas_saidas = SaidaEstoque.objects.select_related(
         'lote__fruta', 'loja_destino'
     ).order_by('-data_saida')[:5]
 
-    # Pedidos das lojas aguardando separação/atendimento
     pedidos_pendentes = Pedido.objects.filter(
         status__in=['PENDENTE', 'CONFIRMADO', 'RASCUNHO']
     ).order_by('-data_criacao')
@@ -68,12 +83,13 @@ def dashboard(request):
         'ultimas_saidas': ultimas_saidas,
         'pedidos_pendentes': pedidos_pendentes,
         'total_pendentes': pedidos_pendentes.count(),
+        'query': query,                         # Passa o termo pesquisado para manter preenchida a barra
+        'frutas_pesquisadas': frutas_query if query else None, # Lista as frutas encontradas com os preços
     }
 
     return render(request, 'estoque/dashboard.html', context)
 
-
-@login_required
+@staff_member_required(login_url='vitrine_cliente')
 def lote_criar(request):
     if request.method == 'POST':
         form = LoteEntradaForm(request.POST)
@@ -81,19 +97,16 @@ def lote_criar(request):
             lote = form.save(commit=False)
             fruta = lote.fruta
 
-            # 1. Copia a quantidade_inicial para a quantidade_atual se estiver em branco
             if not lote.quantidade_atual:
                 lote.quantidade_atual = lote.quantidade_inicial
 
-            # 2. Copia o local de armazenamento padrão da Fruta
             if not lote.local_armazenado and hasattr(fruta, 'local_armazenado'):
                 lote.local_armazenado = fruta.local_armazenado
 
-            # 3. Calcula a data de validade usando os dias de validade da Fruta
             if not lote.data_validade and hasattr(fruta, 'dias_validade') and fruta.dias_validade:
                 lote.data_validade = date.today() + timedelta(days=fruta.dias_validade)
             elif not lote.data_validade:
-                lote.data_validade = date.today() + timedelta(days=7)  # Padrão de 7 dias
+                lote.data_validade = date.today() + timedelta(days=7)
 
             lote.save()
             messages.success(request, f'Lote de {fruta.nome} cadastrado com sucesso!')
@@ -104,7 +117,7 @@ def lote_criar(request):
     return render(request, 'estoque/lote_form.html', {'form': form})
 
 
-@login_required
+@staff_member_required(login_url='vitrine_cliente')
 def dinamica_saida(request):
     if request.method == 'POST':
         form = SaidaEstoqueForm(request.POST)
@@ -135,7 +148,7 @@ def dinamica_saida(request):
     return render(request, 'estoque/saida_form.html', {'form': form})
 
 
-@login_required
+@staff_member_required(login_url='vitrine_cliente')
 def historico_saidas(request):
     saidas = SaidaEstoque.objects.select_related(
         'lote', 'lote__fruta', 'loja_destino'
@@ -172,7 +185,7 @@ def historico_saidas(request):
     return render(request, 'estoque/historico_saidas.html', context)
 
 
-@login_required
+@staff_member_required(login_url='vitrine_cliente')
 def lotes_listar(request):
     mostrar_zerados = request.GET.get('mostrar_zerados') == 'true'
 
@@ -204,7 +217,7 @@ def lotes_listar(request):
     return render(request, 'estoque/lotes_listar.html', context)
 
 
-@login_required
+@staff_member_required(login_url='vitrine_cliente')
 def lote_editar(request, pk):
     lote = get_object_or_404(LoteEntrada, pk=pk)
     if request.method == 'POST':
@@ -223,7 +236,7 @@ def lote_editar(request, pk):
     )
 
 
-@login_required
+@staff_member_required(login_url='vitrine_cliente')
 def lote_excluir(request, pk):
     lote = get_object_or_404(LoteEntrada, pk=pk)
 
@@ -242,7 +255,7 @@ def lote_excluir(request, pk):
     return render(request, 'estoque/lote_confirmar_exclusao.html', {'lote': lote})
 
 
-@login_required
+@staff_member_required(login_url='vitrine_cliente')
 def lote_dar_baixa(request, pk):
     lote = get_object_or_404(LoteEntrada, pk=pk)
 
@@ -253,9 +266,7 @@ def lote_dar_baixa(request, pk):
             qtd_baixa = movimentacao.quantidade
 
             if qtd_baixa <= 0:
-                messages.error(
-                    request, 'A quantidade de baixa deve ser maior que zero.'
-                )
+                messages.error(request, 'A quantidade de baixa deve ser maior que zero.')
             elif qtd_baixa > lote.quantidade_atual:
                 messages.error(
                     request,
@@ -282,9 +293,7 @@ def lote_dar_baixa(request, pk):
     )
 
 
-from django.db.models import Sum
-from django.shortcuts import render
-from .models import Fruta, Loja
+@staff_member_required(login_url='vitrine_cliente')
 def catalogo_loja(request):
     produtos_base = Fruta.objects.filter(
         lotes__quantidade_atual__gt=0
@@ -297,7 +306,6 @@ def catalogo_loja(request):
     verduras = produtos_base.filter(categoria='VERDURA')
     outros = produtos_base.filter(categoria='OUTRO')
 
-    # --- MONTAGEM DO TEXTO DO CATÁLOGO PARA O WHATSAPP ---
     texto_catalogo = "📋 *RELATÓRIO DE ESTOQUE ATUAL - DEPÓSITO*\n"
     texto_catalogo += "Segue a lista de produtos disponíveis para análise de compras:\n\n"
 
@@ -317,10 +325,7 @@ def catalogo_loja(request):
 
     texto_catalogo += "_Atualizado em tempo real pelo sistema._"
 
-    # Substitua pelo número de WhatsApp do seu chefe (com DDI e DDD, ex: 5513999999999)
-    # Se deixar o número vazio (''), o WhatsApp vai perguntar para quem deseja enviar.
     whatsapp_catalogo_url = f"https://api.whatsapp.com/send?phone=5545999512946&text={urllib.parse.quote(texto_catalogo)}"
-    # -----------------------------------------------------
 
     carrinho_sessao = request.session.get('carrinho', {})
     carrinho_itens = []
@@ -344,97 +349,12 @@ def catalogo_loja(request):
         'outros': outros,
         'carrinho_itens': carrinho_itens,
         'lojas': lojas,
-        'whatsapp_catalogo_url': whatsapp_catalogo_url, # Passando o link para o template
+        'whatsapp_catalogo_url': whatsapp_catalogo_url,
     }
     return render(request, 'estoque/catalogo_loja.html', context)
 
-def adicionar_ao_carrinho(request, produto_id):
-    fruta = get_object_or_404(Fruta, id=produto_id)
-    quantidade_solicitada = Decimal(request.POST.get('quantidade', 1))
 
-    if quantidade_solicitada > fruta.estoque_disponivel:
-        messages.error(
-            request,
-            f'Quantidade indisponível! Estoque livre: {fruta.estoque_disponivel} Kg/Unid. '
-            f'(Estoque reservado em outros pedidos: {fruta.estoque_reservado} Kg/Unid.)'
-        )
-        return redirect('catalogo_loja')
-
-    carrinho = request.session.get('carrinho', {})
-    str_id = str(produto_id)
-
-    if str_id in carrinho:
-        carrinho[str_id] += float(quantidade_solicitada)
-    else:
-        carrinho[str_id] = float(quantidade_solicitada)
-
-    request.session['carrinho'] = carrinho
-    messages.success(request, f'{fruta.nome} adicionado ao carrinho com sucesso!')
-
-    return redirect('catalogo_loja')
-
-
-def remover_do_carrinho(request, produto_id):
-    carrinho = request.session.get('carrinho', {})
-    str_id = str(produto_id)
-
-    if str_id in carrinho:
-        del carrinho[str_id]
-        request.session['carrinho'] = carrinho
-        messages.info(request, "Item removido do carrinho.")
-
-    return redirect('catalogo_loja')
-
-
-def finalizar_pedido(request):
-    if request.method == 'POST':
-        carrinho = request.session.get('carrinho', {})
-
-        if not carrinho:
-            messages.error(request, "Seu carrinho está vazio.")
-            return redirect('catalogo_loja')
-
-        nome_solicitante = request.POST.get('nome_solicitante')
-        loja_id = request.POST.get('loja')
-
-        if not nome_solicitante or not loja_id:
-            messages.error(request, "Por favor, preencha o nome e selecione a loja.")
-            return redirect('catalogo_loja')
-
-        loja = get_object_or_404(Loja, id=loja_id)
-
-        pedido = Pedido.objects.create(
-            cliente_nome=nome_solicitante,
-            loja_solicitante=loja,
-            usuario=request.user if request.user.is_authenticated else None,
-            status='CONFIRMADO'
-        )
-
-        for fruta_id, qtd in carrinho.items():
-            fruta = get_object_or_404(Fruta, id=fruta_id)
-
-            ItemPedido.objects.create(
-                pedido=pedido,
-                fruta=fruta,
-                quantidade=Decimal(str(qtd)),
-                preco_unitario=Decimal('0.00')
-            )
-
-        # --- GERAÇÃO DA NOTIFICAÇÃO PARA O SININHO ---
-        link_pedido = reverse('pedido_detalhe', args=[pedido.id])
-
-        Notificacao.objects.create(
-            mensagem=f"Novo pedido #{pedido.codigo_pedido} da Loja {loja.nome} por {nome_solicitante}.",
-            link=link_pedido
-        )
-        # ---------------------------------------------
-
-        request.session['carrinho'] = {}
-        messages.success(request, f"Pedido #{pedido.codigo_pedido} enviado com sucesso ao depósito!")
-
-    return redirect('catalogo_loja')
-
-@login_required
+@staff_member_required(login_url='vitrine_cliente')
 def separar_pedido(request, pedido_id):
     if request.method == 'POST':
         pedido = get_object_or_404(Pedido, id=pedido_id)
@@ -458,7 +378,6 @@ def separar_pedido(request, pedido_id):
                     lote.quantidade_atual -= qtd_retirar
                     lote.save()
 
-                    # Registra a saída no estoque para rastreabilidade
                     SaidaEstoque.objects.create(
                         lote=lote,
                         loja_destino=pedido.loja_solicitante,
@@ -471,18 +390,17 @@ def separar_pedido(request, pedido_id):
             pedido.status = 'CONCLUIDO'
             pedido.save()
 
-            # --- MARCA A NOTIFICAÇÃO DESTE PEDIDO COMO LIDA ---
             Notificacao.objects.filter(
                 link__icontains=f"pedido/{pedido.id}/",
                 lida=False
             ).update(lida=True)
-            # ------------------------------------------------
 
         messages.success(request, f"Pedido #{pedido.codigo_pedido} separado e concluído com sucesso!")
 
     return redirect('dashboard')
 
-@login_required
+
+@staff_member_required(login_url='vitrine_cliente')
 def pedido_detalhe(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id)
     itens = pedido.itens.select_related('fruta').all()
@@ -494,7 +412,7 @@ def pedido_detalhe(request, pedido_id):
     return render(request, 'estoque/pedido_detalhe.html', context)
 
 
-@login_required
+@staff_member_required(login_url='vitrine_cliente')
 def pedidos_historico(request):
     pedidos = Pedido.objects.prefetch_related('itens__fruta').select_related('loja_solicitante', 'usuario').all()
 
@@ -547,13 +465,12 @@ def pedidos_historico(request):
     return render(request, 'estoque/pedidos_historico.html', context)
 
 
-@login_required
+@staff_member_required(login_url='vitrine_cliente')
 def registrar_compra_ceasa(request):
     if request.method == 'POST':
         form = CompraCeasaForm(request.POST)
         if form.is_valid():
             compra = form.save(commit=False)
-
             nome_novo = form.cleaned_data.get('nome_nova_fruta')
 
             if nome_novo:
@@ -582,40 +499,21 @@ def registrar_compra_ceasa(request):
     return render(request, 'estoque/registrar_compra.html', {'form': form})
 
 
-@login_required
+@staff_member_required(login_url='vitrine_cliente')
 def listar_compras_conferencia(request):
     compras_pendentes = CompraCeasa.objects.filter(status='PENDENTE').order_by('-data_compra')
     return render(request, 'estoque/conferencia_compras.html', {'compras_pendentes': compras_pendentes})
 
 
-@login_required
+@staff_member_required(login_url='vitrine_cliente')
 def realizar_conferencia_compra(request, pk):
     compra = get_object_or_404(CompraCeasa, pk=pk)
 
     if request.method == 'POST':
         quantidade_conferida = request.POST.get('quantidade_conferida')
-        observacao = request.POST.get('observacao', '')
-
-        if quantidade_conferida:
-            compra.quantidade_comprada = float(quantidade_conferida)
-            compra.status = 'CONFERIDO'
-            compra.save()
-
-            return redirect('listar_compras_conferencia')
-
-    return render(request, 'estoque/detalhe_conferencia.html', {'compra': compra})
-
-@login_required
-def realizar_conferencia_compra(request, pk):
-    compra = get_object_or_404(CompraCeasa, pk=pk)
-
-    if request.method == 'POST':
-        quantidade_conferida = request.POST.get('quantidade_conferida')
-        observacao = request.POST.get('observacao', '')
 
         if quantidade_conferida:
             with transaction.atomic():
-                # Atualiza os dados da compra CEASA
                 compra.quantidade_comprada = Decimal(quantidade_conferida)
                 compra.status = 'CONFERIDO'
                 compra.save()
@@ -624,7 +522,6 @@ def realizar_conferencia_compra(request, pk):
                 data_val = timezone.now().date() + timedelta(days=dias_validade)
                 armazem = getattr(compra.fruta, 'armazem_recomendado', 'DEPOSITO') or 'DEPOSITO'
 
-                # CRIAÇÃO DO LOTE COM OS PREÇOS E DADOS DA COMPRA
                 lote = LoteEntrada.objects.create(
                     fruta=compra.fruta,
                     quantidade_inicial=compra.quantidade_comprada,
@@ -637,7 +534,6 @@ def realizar_conferencia_compra(request, pk):
                     codigo_lote=f"CEASA-{compra.id}-{timezone.now().strftime('%d%m%Y')}"
                 )
 
-                # Copia as lojas destinatárias da CompraCeasa para o LoteEntrada (ManyToManyField)
                 if hasattr(compra, 'lojas_destinatarias') and compra.lojas_destinatarias.exists():
                     lote.lojas_destinatarias.set(compra.lojas_destinatarias.all())
 
@@ -646,7 +542,132 @@ def realizar_conferencia_compra(request, pk):
 
     return render(request, 'estoque/detalhe_conferencia.html', {'compra': compra})
 
-@login_required
+
+@staff_member_required(login_url='vitrine_cliente')
 def marcar_todas_notificacoes_lidas(request):
     Notificacao.objects.filter(lida=False).update(lida=True)
     return redirect(request.META.get('HTTP_REFERER', 'dashboard'))
+
+
+# ==========================================
+# ÁREA PÚBLICA DO CLIENTE (O INSTAGRAM DAS FRUTAS)
+# ==========================================
+
+def vitrine_cliente(request):
+    """
+    Exibe o feed, o catálogo de frutas e permite a pesquisa rápida por nome.
+    """
+    posts_feed = PostFeedFrutas.objects.filter(ativo=True).order_by('-data_postagem')
+
+    # Captura o termo digitado na barra de pesquisa (se houver)
+    query = request.GET.get('q', '')
+
+    produtos = Fruta.objects.all()
+    if query:
+        produtos = produtos.filter(nome__icontains=query)
+
+    frutas = produtos.filter(categoria__icontains='Fruta')
+    legumes = produtos.filter(categoria__icontains='Legume')
+    verduras = produtos.filter(categoria__icontains='Verdura')
+    outros = produtos.exclude(
+        categoria__icontains='Fruta'
+    ).exclude(
+        categoria__icontains='Legume'
+    ).exclude(
+        categoria__icontains='Verdura'
+    )
+
+    # Identificação do carrinho por session_key
+    if not request.session.session_key:
+        request.session.create()
+    session_key = request.session.session_key
+
+    carrinho_itens = ItemCarrinhoCliente.objects.filter(session_key=session_key)
+    total_carrinho = sum(item.subtotal for item in carrinho_itens)
+
+    context = {
+        'posts_feed': posts_feed,
+        'frutas': frutas,
+        'legumes': legumes,
+        'verduras': verduras,
+        'outros': outros,
+        'carrinho_itens': carrinho_itens,
+        'total_carrinho': total_carrinho,
+        'query': query, # Passa o termo pesquisado para o template se precisar exibir
+    }
+    return render(request, 'estoque/vitrine_cliente.html', context)
+def adicionar_ao_carrinho(request, produto_id):
+    if request.method == 'POST':
+        # Corrigido para buscar no modelo Fruta, que é o que a vitrine exibe
+        produto = get_object_or_404(Fruta, id=produto_id)
+        tipo_venda = request.POST.get('tipo_venda', 'BANCA')  # ATACADO ou BANCA
+        quantidade = Decimal(request.POST.get('quantidade', 1))
+
+        if not request.session.session_key:
+            request.session.create()
+        session_key = request.session.session_key
+
+        item, created = ItemCarrinhoCliente.objects.get_or_create(
+            session_key=session_key,
+            produto=produto,
+            tipo_venda=tipo_venda,
+            defaults={'quantidade': quantidade}
+        )
+
+        if not created:
+            item.quantidade += quantidade
+            item.save()
+
+        messages.success(request, f"{produto.nome} adicionado ao carrinho!")
+    return redirect('vitrine_cliente')
+
+
+def remover_do_carrinho_cliente(request, item_id):
+    if not request.session.session_key:
+        request.session.create()
+
+    item = get_object_or_404(ItemCarrinhoCliente, id=item_id, session_key=request.session.session_key)
+    item.delete()
+    messages.info(request, "Item removido do carrinho.")
+    return redirect('vitrine_cliente')
+
+
+def finalizar_pedido_whatsapp(request):
+    """
+    Gera o ID do pedido com base nos itens do carrinho e monta o link redirecionando para o WhatsApp do vendedor.
+    """
+    if not request.session.session_key:
+        return redirect('vitrine_cliente')
+
+    session_key = request.session.session_key
+    carrinho_itens = ItemCarrinhoCliente.objects.filter(session_key=session_key)
+
+    if not carrinho_itens.exists():
+        messages.error(request, "Seu carrinho está vazio.")
+        return redirect('vitrine_cliente')
+
+    import time
+    id_pedido = f"#PEDIDO-{int(time.time())}"
+
+    # Monta a mensagem para o WhatsApp corrigindo a sobrescrita da string
+    texto_whats = f"🛒 *NOVO PEDIDO PELO CATÁLOGO* - *{id_pedido}*\n\n"
+    texto_whats += "Olá! Gostaria de fazer o seguinte pedido:\n\n"
+
+    total_geral = Decimal('0.00')
+
+    for item in carrinho_itens:
+        subtotal = item.subtotal
+        total_geral += subtotal
+        tipo_str = "Caixa (Atacado)" if item.tipo_venda == 'ATACADO' else "Kg/Un (Banca)"
+        texto_whats += f"• {item.quantidade}x {item.produto.nome} [{tipo_str}] - R$ {subtotal:.2f}\n"
+
+    texto_whats += f"\n*Valor Parcial Estimado: R$ {total_geral:.2f}*\n\n"
+    texto_whats += "Aguardando confirmação de pagamento e dados de entrega com o vendedor."
+
+    # Limpa o carrinho após gerar o pedido
+    carrinho_itens.delete()
+
+    telefone_vendedor = "5545999512946"
+    whatsapp_url = f"https://api.whatsapp.com/send?phone={telefone_vendedor}&text={urllib.parse.quote(texto_whats)}"
+
+    return redirect(whatsapp_url)

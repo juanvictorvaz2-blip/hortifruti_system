@@ -30,6 +30,42 @@
         }
     </style>
 </head>
+
+<div class="container my-4">
+    <form method="GET" action="" class="row g-2 justify-content-center">
+        <div class="col-md-6">
+            <input type="text" name="q" class="form-control" placeholder="🔍 Pesquisar produto por nome..." value="{{ query }}">
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-success">Buscar</button>
+        </div>
+        {% if query %}
+            <div class="col-auto">
+                <a href="." class="btn btn-outline-secondary">Limpar</a>
+            </div>
+        {% endif %}
+    </form>
+</div>
+
+{% if query %}
+    <div class="card mt-4 p-3 shadow-sm">
+        <h5>Resultados da busca por "{{ query }}" na Base de Dados:</h5>
+        <ul class="list-group list-group-flush">
+            {% for f in frutas_pesquisadas %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span><strong>{{ f.nome }}</strong> ({{ f.get_categoria_display }})</span>
+                    <span>
+                        <span class="badge bg-success me-4">Banca: R$ {{ f.preco_banca }}</span>
+                        <span class="badge bg-primary">Atacado: R$ {{ f.preco_atacado }}</span>
+                    </span>
+                </li>
+            {% empty %}
+                <li class="list-group-item text-muted">Nenhuma fruta encontrada com esse nome.</li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endif %}
+
 <body class="bg-light">
 <div class="container my-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -283,6 +319,7 @@
 
     </div>
 </div>
+
 
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/bootstrap.bundle.min.js"></script>

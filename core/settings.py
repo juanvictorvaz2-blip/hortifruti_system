@@ -150,3 +150,8 @@ APPEND_SLASH = True
 # Força o redirecionamento de HTTP (comum em celulares) para HTTPS
 SECURE_SSL_REDIRECT = not DEBUG
 ALLOWED_HOSTS = ['hortifruti-system.onrender.com', 'localhost', '127.0.0.1', '*']
+
+
+# Configuração de Arquivos de Mídia (Uploads de imagens dos produtos e feed)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
